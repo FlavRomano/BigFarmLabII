@@ -1,6 +1,6 @@
 # BigFarm
 Si chiede di realizzare un progetto che implementa lo schema di comunicazione tra processi e thread mostrato in figura:
-
+<a href="https://ibb.co/9ZTYMNM"><img src="https://i.ibb.co/41TNQ7Q/farm.png" alt="farm" border="0"></a>
 Il progetto è composto da tre processi, il primo in C denominato _MasterWorker_ (eseguibile `farm`); il secondo in Python denominato _Collector_ (eseguibile `collector.py`) il terzo in C denominato _Client_ (eseguibile `client`).
 
 - _MasterWorker_ è un processo multi-threaded composto da un thread Master e da `n` thread Worker (il numero di thread Worker può essere variato utilizzando l’argomento opzionale `-n`, vedere nel seguito). Il programma prende come argomenti sulla linea di comando una lista di file binari contenenti interi lunghi (`long`) ed un certo numero di argomenti opzionali (opzioni `-n`, `-q` e `-t` discusse nelle note).
