@@ -3,13 +3,13 @@ CFLAGS=-pthread -g -Wall -O
 TARGET=farm
 
 all:
-	$(CC) main.c $(CFLAGS) -o $(TARGET)
+	$(CC) farm.c xerrori.c $(CFLAGS) -o $(TARGET)
 
 run:
-	./$(TARGET) -q 2 -t 1 z0.dat z1.dat z2.dat z3.dat z4.dat z5.dat z6.dat
+	./$(TARGET) -t 5 z0.dat z1.dat
 
 clean:
-	rm $(TARGET)
+	rm -f $(TARGET) $(EXECS) *.o
 
 valgrind:
 	valgrind -s --leak-check=full ./$(TARGET) z0.dat z1.dat
