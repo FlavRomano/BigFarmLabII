@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -20,7 +21,7 @@ typedef struct
     pthread_mutex_t *mutex;
     sem_t *sem_free_slots;
     sem_t *sem_data_items;
-    int num_of_files;
+    int *num_of_files;
     int *fd_skt;
     struct sockaddr_in *s_addr;
 } t_args;
@@ -29,16 +30,15 @@ volatile sig_atomic_t sign = 0;
 
 void handler(int s)
 {
-
     sign = 1;
 }
 
 long sum_file(char *f_name)
 {
-    FILE *f;
+    FILE *f = fopen(f_name, "rb");
     long res = 0;
     int c = 0;
-    if (f = fopen(f_name, "rb") == NULL)
+    if (f == NULL)
         fprintf(stderr, "Errore apertura file\n");
     else
     {
@@ -64,14 +64,16 @@ void *worker_body(void *arg)
     {
         xsem_wait(args->sem_data_items, __HERE__);
         xpthread_mutex_lock(args->mutex, __HERE__);
-        strcpy(file_name, args->buffer[*(args->cindex) % args->params[1]]);
+        int i = *(args->cindex);
+        int size_buffer = args->params[1];
+        strcpy(file_name, args->buffer[i % size_buffer]);
         *(args->cindex) += 1;
         xpthread_mutex_unlock(args->mutex, __HERE__);
         xsem_post(args->sem_free_slots, __HERE__);
         if (strcmp(file_name, "/") == 0)
             break;
         long sum = sum_file(file_name);
-
+        printf("Il thread %d ha restituito %ld come somma\n", gettid(), sum);
     } while (true);
     pthread_exit(NULL);
 }
@@ -146,31 +148,31 @@ int main(int argc, char **argv)
         j++;
     }
 
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigaction(SIGINT, NULL, &sa);
+    sigaction(SIGINT, &sa, NULL);
+
     pthread_mutex_t cmutex = PTHREAD_MUTEX_INITIALIZER;
     sem_t sem_free_slots, sem_data_items;
     xsem_init(&sem_free_slots, 0, params[1], __HERE__);
     xsem_init(&sem_data_items, 0, 0, __HERE__);
     char *buffer[params[1]];
     int pindex = 0, cindex = 0;
-    t_args args;
 
-    args.buffer = buffer;
-    args.params = &params;
-    args.mutex = &cmutex;
-    args.sem_data_items = &sem_data_items;
-    args.sem_free_slots = &sem_free_slots;
-    args.num_of_files = num_of_files;
+    t_args *args = malloc(sizeof(t_args));
+    args->buffer = buffer;
+    args->params = params;
+    args->mutex = &cmutex;
+    args->sem_data_items = &sem_data_items;
+    args->sem_free_slots = &sem_free_slots;
+    args->num_of_files = &num_of_files;
 
     pthread_t th[params[0]];
     for (int i = 0; i < params[0]; i++)
     {
-        xpthread_create(&th[i], NULL, &worker_body, &args, __HERE__);
+        xpthread_create(&th[i], NULL, worker_body, args, __HERE__);
     }
-
-    struct sigaction sa;
-    sa.sa_handler = handler;
-    sigation(SIGINT, NULL, &sa);
-    sigation(SIGINT, &sa, NULL);
 
     for (int i = 0; sign == 0 && i < num_of_files; i++)
     {
