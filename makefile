@@ -4,7 +4,7 @@ LDLIBS=-lm -lrt -pthread
 TARGET=farm
 
 all:
-	$(CC) farm.c xerrori.c $(CFLAGS) -o $(TARGET)
+	$(CC) farm.c xerrori.c $(CFLAGS) -O0 -o $(TARGET)
 
 farm: farm.o xerrori.o
 		$(CC) xerrori.o farm.o  $(LDLIBS) -o farm

@@ -15,9 +15,9 @@
 
 typedef struct
 {
-    int *params;
     int *cindex;
     char **buffer;
+    int *buf_len;
     pthread_mutex_t *mutex;
     sem_t *sem_free_slots;
     sem_t *sem_data_items;
@@ -35,24 +35,19 @@ void handler(int s)
 
 long sum_file(char *f_name)
 {
-    FILE *f = fopen(f_name, "rb");
-    long res = 0;
-    int c = 0;
+    FILE *f = xfopen(f_name, "rb", __HERE__);
+    long x, res = 0;
+    int i = 0;
     if (f == NULL)
-        fprintf(stderr, "Errore apertura file\n");
-    else
     {
-        long x;
-        while (true)
-        {
-            int e = fread(&x, sizeof(long), 1, f);
-            if (e == -1)
-                termina("Errore fread\n");
-            if (e != -1)
-                break;
-            res += (c++ * x);
-        }
+        fprintf(stderr, "Errore apertura file\n");
+        exit(-1);
     }
+    while (fread(&x, sizeof(long), 1, f))
+    {
+        res += (i++ * x);
+    }
+
     return res;
 }
 
@@ -65,11 +60,12 @@ void *worker_body(void *arg)
         xsem_wait(args->sem_data_items, __HERE__);
         xpthread_mutex_lock(args->mutex, __HERE__);
         int i = *(args->cindex);
-        int size_buffer = args->params[1];
+        int size_buffer = *(args->buf_len);
         strcpy(file_name, args->buffer[i % size_buffer]);
         *(args->cindex) += 1;
         xpthread_mutex_unlock(args->mutex, __HERE__);
         xsem_post(args->sem_free_slots, __HERE__);
+        printf("%s\n", file_name);
         if (strcmp(file_name, "/") == 0)
             break;
         long sum = sum_file(file_name);
@@ -158,11 +154,16 @@ int main(int argc, char **argv)
     xsem_init(&sem_free_slots, 0, params[1], __HERE__);
     xsem_init(&sem_data_items, 0, 0, __HERE__);
     char *buffer[params[1]];
+    for (int i = 0; i < params[1]; i++)
+    {
+        buffer[i] = malloc(255);
+    }
     int pindex = 0, cindex = 0;
 
     t_args *args = malloc(sizeof(t_args));
+    args->cindex = &cindex;
     args->buffer = buffer;
-    args->params = params;
+    args->buf_len = &params[1];
     args->mutex = &cmutex;
     args->sem_data_items = &sem_data_items;
     args->sem_free_slots = &sem_free_slots;
