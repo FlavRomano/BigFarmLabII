@@ -1,6 +1,8 @@
 #include "xerrori.h"
 #include <stdlib.h>
 #include <ctype.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -21,9 +23,6 @@ typedef struct
     pthread_mutex_t *mutex;
     sem_t *sem_free_slots;
     sem_t *sem_data_items;
-    int *num_of_files;
-    int *fd_skt;
-    struct sockaddr_in *s_addr;
 } t_args;
 
 volatile sig_atomic_t sign = 0;
@@ -38,7 +37,7 @@ long sum_file(char *f_name)
     FILE *f = xfopen(f_name, "rb", __HERE__);
     long x, res = 0;
     int i = 0;
-    if (f == NULL)
+    if (f == 0x0) /* NULL è un puntatore a 0x0, quindi NULL == 0x0 */
     {
         fprintf(stderr, "Errore apertura file\n");
         exit(-1);
@@ -49,6 +48,13 @@ long sum_file(char *f_name)
     }
 
     return res;
+}
+
+void send_to_collector(char *res)
+{
+    int fd_skt;
+    struct sockaddr_in serv_addr;
+    size_t e;
 }
 
 void *worker_body(void *arg)
@@ -65,11 +71,13 @@ void *worker_body(void *arg)
         *(args->cindex) += 1;
         xpthread_mutex_unlock(args->mutex, __HERE__);
         xsem_post(args->sem_free_slots, __HERE__);
-        printf("%s\n", file_name);
-        if (strcmp(file_name, "/") == 0)
+        if (!strcmp(file_name, "_"))
             break;
+        // printf("%s\n", file_name);
         long sum = sum_file(file_name);
-        printf("Il thread %d ha restituito %ld come somma\n", gettid(), sum);
+        char res[276];
+        sprintf(res, "%s-%ld", file_name, sum);
+        printf("\tIl thread %d ha restituito %s\n", gettid(), res);
     } while (true);
     pthread_exit(NULL);
 }
@@ -167,14 +175,15 @@ int main(int argc, char **argv)
     args->mutex = &cmutex;
     args->sem_data_items = &sem_data_items;
     args->sem_free_slots = &sem_free_slots;
-    args->num_of_files = &num_of_files;
 
+    // thread worker
     pthread_t th[params[0]];
     for (int i = 0; i < params[0]; i++)
     {
         xpthread_create(&th[i], NULL, worker_body, args, __HERE__);
     }
 
+    // master thread
     for (int i = 0; sign == 0 && i < num_of_files; i++)
     {
         usleep(params[2] * 1000);
@@ -183,11 +192,11 @@ int main(int argc, char **argv)
         xsem_post(&sem_data_items, __HERE__);
     }
 
-    // terminazione threads
+    // terminazione threads con un dummy char
     for (int i = 0; i < params[0]; i++)
     {
         xsem_wait(&sem_free_slots, __HERE__);
-        strcpy(buffer[pindex++ % params[1]], "/");
+        strcpy(buffer[pindex++ % params[1]], "_");
         xsem_post(&sem_data_items, __HERE__);
     }
 
@@ -195,6 +204,10 @@ int main(int argc, char **argv)
     {
         xpthread_join(th[i], NULL, __HERE__);
     }
+
+    sem_destroy(&sem_data_items);
+    sem_destroy(&sem_free_slots);
+    xpthread_mutex_destroy(&cmutex, __HERE__);
 
     return 0;
 }
