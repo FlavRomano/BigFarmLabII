@@ -50,53 +50,6 @@ long sum_file(char *f_name)
     return res;
 }
 
-ssize_t readn(int fd, void *ptr, size_t n)
-{
-    size_t nleft;
-    ssize_t nread;
-
-    nleft = n;
-    while (nleft > 0)
-    {
-        if ((nread = read(fd, ptr, nleft)) < 0)
-        {
-            if (nleft == n)
-                return -1; /* error, return -1 */
-            else
-                break; /* error, return amount read so far */
-        }
-        else if (nread == 0)
-            break; /* EOF */
-        nleft -= nread;
-        ptr += nread;
-    }
-    return (n - nleft); /* return >= 0 */
-}
-
-/* Write "n" bytes to a descriptor */
-ssize_t writen(int fd, void *ptr, size_t n)
-{
-    size_t nleft;
-    ssize_t nwritten;
-
-    nleft = n;
-    while (nleft > 0)
-    {
-        if ((nwritten = write(fd, ptr, nleft)) < 0)
-        {
-            if (nleft == n)
-                return -1; /* error, return -1 */
-            else
-                break; /* error, return amount written so far */
-        }
-        else if (nwritten == 0)
-            break;
-        nleft -= nwritten;
-        ptr += nwritten;
-    }
-    return (n - nleft); /* return >= 0 */
-}
-
 void send_to_collector(char *res)
 {
     int fd_skt, res_len;
@@ -120,7 +73,7 @@ void send_to_collector(char *res)
     serv.sin_port = htons(PORT);
     serv.sin_addr.s_addr = inet_addr(HOST);
 
-    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv) < 0))
+    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
     {
         termina("Errore apertura connessione\n");
     }
@@ -167,9 +120,9 @@ void *worker_body(void *arg)
         // printf("%s\n", file_name);
         long sum = sum_file(file_name);
         char res[276];
-        sprintf(res, "%s-%ld", file_name, sum);
-        // send_to_collector(res);
+        sprintf(res, "%s:%ld", file_name, sum);
         printf("\tIl thread %d ha restituito %s\n", gettid(), res);
+        send_to_collector(res);
     } while (true);
     pthread_exit(NULL);
 }
@@ -275,6 +228,7 @@ int main(int argc, char **argv)
         xpthread_create(&th[i], NULL, worker_body, args, __HERE__);
     }
 
+    sleep(1);
     /* master thread */
     for (int i = 0; sign == 0 && i < num_of_files; i++)
     {
@@ -283,7 +237,6 @@ int main(int argc, char **argv)
         strcpy(buffer[pindex++ % params[1]], files[i]);
         xsem_post(&sem_data_items, __HERE__);
     }
-
     /* terminazione threads con un dummy char */
     for (int i = 0; i < params[0]; i++)
     {
