@@ -13,7 +13,7 @@
 #define _GNU_SOURCE
 #define __HERE__ __LINE__, __FILE__
 #define HOST "127.0.0.1" /* local host */
-#define PORT 65432
+#define PORT 65201
 
 typedef struct
 {
@@ -50,11 +50,102 @@ long sum_file(char *f_name)
     return res;
 }
 
+ssize_t readn(int fd, void *ptr, size_t n)
+{
+    size_t nleft;
+    ssize_t nread;
+
+    nleft = n;
+    while (nleft > 0)
+    {
+        if ((nread = read(fd, ptr, nleft)) < 0)
+        {
+            if (nleft == n)
+                return -1; /* error, return -1 */
+            else
+                break; /* error, return amount read so far */
+        }
+        else if (nread == 0)
+            break; /* EOF */
+        nleft -= nread;
+        ptr += nread;
+    }
+    return (n - nleft); /* return >= 0 */
+}
+
+/* Write "n" bytes to a descriptor */
+ssize_t writen(int fd, void *ptr, size_t n)
+{
+    size_t nleft;
+    ssize_t nwritten;
+
+    nleft = n;
+    while (nleft > 0)
+    {
+        if ((nwritten = write(fd, ptr, nleft)) < 0)
+        {
+            if (nleft == n)
+                return -1; /* error, return -1 */
+            else
+                break; /* error, return amount written so far */
+        }
+        else if (nwritten == 0)
+            break;
+        nleft -= nwritten;
+        ptr += nwritten;
+    }
+    return (n - nleft); /* return >= 0 */
+}
+
 void send_to_collector(char *res)
 {
-    int fd_skt;
-    struct sockaddr_in serv_addr;
+    int fd_skt, res_len;
+    struct sockaddr_in serv;
     size_t e;
+
+    fd_skt = 0;
+    res_len = strlen(res);
+    int package[strlen(res)];
+    for (int i = 0; i < res_len; i++)
+    {
+        package[i] = (int)res[i];
+    }
+
+    if ((fd_skt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        termina("Errore creazione socket\n");
+    }
+
+    serv.sin_family = AF_INET;
+    serv.sin_port = htons(PORT);
+    serv.sin_addr.s_addr = inet_addr(HOST);
+
+    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv) < 0))
+    {
+        termina("Errore apertura connessione\n");
+    }
+
+    int dim_host_to_network = htonl(res_len);
+    e = writen(fd_skt, &dim_host_to_network, sizeof(int));
+    if (e != sizeof(int))
+    {
+        termina("Errore invio dati al server\n");
+    }
+    for (int i = 0; i < res_len; i++)
+    {
+        int c = htonl(package[i]);
+        e = writen(fd_skt, &c, sizeof(int));
+        if (e != sizeof(int))
+        {
+            fprintf(stderr, "Errore write\n");
+            exit(-1);
+        }
+    }
+    if (close(fd_skt) < 0)
+    {
+        termina("Errore chiusura socket\n");
+    }
+    printf("==Messaggio inviato==\n");
 }
 
 void *worker_body(void *arg)
@@ -77,6 +168,7 @@ void *worker_body(void *arg)
         long sum = sum_file(file_name);
         char res[276];
         sprintf(res, "%s-%ld", file_name, sum);
+        // send_to_collector(res);
         printf("\tIl thread %d ha restituito %s\n", gettid(), res);
     } while (true);
     pthread_exit(NULL);
@@ -136,7 +228,7 @@ void gen_params(int argc, char **argv, int params[])
 
 int main(int argc, char **argv)
 {
-    int params[3]; // 0. nthread ; 1. qlen ; 2. delay
+    int params[3]; /* 0. nthread ; 1. qlen ; 2. delay */
     if (argc < 2)
     {
         printf("Uso: %s file [file ...] \n", argv[0]);
@@ -176,14 +268,14 @@ int main(int argc, char **argv)
     args->sem_data_items = &sem_data_items;
     args->sem_free_slots = &sem_free_slots;
 
-    // thread worker
+    /* thread worker */
     pthread_t th[params[0]];
     for (int i = 0; i < params[0]; i++)
     {
         xpthread_create(&th[i], NULL, worker_body, args, __HERE__);
     }
 
-    // master thread
+    /* master thread */
     for (int i = 0; sign == 0 && i < num_of_files; i++)
     {
         usleep(params[2] * 1000);
@@ -192,7 +284,7 @@ int main(int argc, char **argv)
         xsem_post(&sem_data_items, __HERE__);
     }
 
-    // terminazione threads con un dummy char
+    /* terminazione threads con un dummy char */
     for (int i = 0; i < params[0]; i++)
     {
         xsem_wait(&sem_free_slots, __HERE__);
@@ -205,6 +297,10 @@ int main(int argc, char **argv)
         xpthread_join(th[i], NULL, __HERE__);
     }
 
+    for (int i = 0; i < params[1]; i++)
+    {
+        free(buffer[i]);
+    }
     sem_destroy(&sem_data_items);
     sem_destroy(&sem_free_slots);
     xpthread_mutex_destroy(&cmutex, __HERE__);
