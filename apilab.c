@@ -1,8 +1,7 @@
-#include "xerrori.h"
-#include <semaphore.h>
+#include "apilab.h"
 
 // collezione di chiamate a funzioni di sistema con controllo output
-// i prototipi sono in xerrori.h
+// i prototipi sono in apilab.h
 
 // termina un processo con eventuale messaggio d'errore
 void termina(const char *messaggio)

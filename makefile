@@ -4,19 +4,19 @@ LDLIBS=-lm -lrt -pthread
 TARGET=farm
 
 all:
-	$(CC) farm.c xerrori.c $(CFLAGS) -O0 -o $(TARGET)
+	$(CC) farm.c apilab.c $(CFLAGS) -O0 -o $(TARGET)
 
 farm: farm.o xerrori.o
-		$(CC) xerrori.o farm.o  $(LDLIBS) -o farm
+		$(CC) apilab.o farm.o  $(LDLIBS) -o farm
 
 farm.o: farm.c xerrori.h
 		$(CC) $(CFLAGS) -c -o farm.o farm.c
 
 xerrori.o: xerrori.c xerrori.h
-		$(CC) $(CFLAGS) -c -o xerrori.o xerrori.c
+		$(CC) $(CFLAGS) -c -o apilab.o apilab.c
 
 run:
-	./$(TARGET) -t 5 z0.dat z1.dat
+	./$(TARGET) -t 5 z0.dat z1.dat z2.dat
 
 clean:
 	rm -f $(TARGET) $(EXECS) *.o

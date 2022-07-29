@@ -1,14 +1,4 @@
-#include "xerrori.h"
-#include <stdlib.h>
-#include <ctype.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <semaphore.h>
+#include "apilab.h"
 
 #define _GNU_SOURCE
 #define __HERE__ __LINE__, __FILE__
@@ -250,6 +240,7 @@ int main(int argc, char **argv)
         xpthread_join(th[i], NULL, __HERE__);
     }
 
+    free(files);
     for (int i = 0; i < params[1]; i++)
     {
         free(buffer[i]);

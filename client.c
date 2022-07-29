@@ -1,65 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <assert.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#include "apilab.h"
 
 #define _GNU_SOURCE
 #define HOST "127.0.0.1" /* local host */
 #define PORT 65201
 
-ssize_t readn(int fd, void *ptr, size_t n)
-{
-    size_t nleft;
-    ssize_t nread;
-
-    nleft = n;
-    while (nleft > 0)
-    {
-        if ((nread = read(fd, ptr, nleft)) < 0)
-        {
-            if (nleft == n)
-                return -1; /* error, return -1 */
-            else
-                break; /* error, return amount read so far */
-        }
-        else if (nread == 0)
-            break; /* EOF */
-        nleft -= nread;
-        ptr += nread;
-    }
-    return (n - nleft); /* return >= 0 */
-}
-
-/* Write "n" bytes to a descriptor */
-ssize_t writen(int fd, void *ptr, size_t n)
-{
-    size_t nleft;
-    ssize_t nwritten;
-
-    nleft = n;
-    while (nleft > 0)
-    {
-        if ((nwritten = write(fd, ptr, nleft)) < 0)
-        {
-            if (nleft == n)
-                return -1; /* error, return -1 */
-            else
-                break; /* error, return amount written so far */
-        }
-        else if (nwritten == 0)
-            break;
-        nleft -= nwritten;
-        ptr += nwritten;
-    }
-    return (n - nleft); /* return >= 0 */
-}
-
-void comunicazione(int event, long num)
+void comunicazione(int event, long l)
 {
     int fd_skt;
     struct sockaddr_in serv;
@@ -79,16 +24,10 @@ void comunicazione(int event, long num)
     {
         termina("Errore apertura connessione\n");
     }
-
+    int dim;
     if (event)
     {
-        int dim;
-        dim = htonl(dim);
-        e = writen(fd_skt, &dim, sizeof(int));
-        if (e != sizeof(int))
-        {
-            termina("Errore write\n");
-        }
+        ;
     }
     else
     {

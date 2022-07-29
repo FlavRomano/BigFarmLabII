@@ -8,10 +8,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <ctype.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <sys/mman.h>
 #include <sys/stat.h> /* For mode constants */
 #include <fcntl.h>    /* For O_* constants */
