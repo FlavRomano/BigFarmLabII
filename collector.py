@@ -56,27 +56,54 @@ def gestisci_connessione(conn, addr, dic, mutex):
                     dic[arr[1]] += f";{arr[0]}" 
                     mutex.release()
             else:
-                print("RICHIESTA DEL CLIENT DI STAMPARE LE COPPIE")
-                cerca_somma(s, conn, dic, mutex)
+                print("\n\n- RICHIESTA DEL CLIENT CERCARE UNA SOMMA")
+                cerca_somma(s, conn, dic, mutex, 1)
         else:
-            print("RICHIESTA DEL CLIENT CERCARE UNA SOMMA")
+            print("\n\n- RICHIESTA DEL CLIENT DI STAMPARE LE COPPIE")
             # print_coppie()
         print(f"Terminato con {addr}")
     
 
-def cerca_somma(s, conn, dic, mutex):
+def cerca_somma(s, conn, dic, mutex, flag):
+    mutex.acquire()
+    f = 0
+    if len(dic) == 0 or flag == 0:
+        print("== Nessun file ==")
+        f = 1
+        mess = "Nessun file"
+        conn.sendall(struct.pack("!i", 11))
+        for c in mess:
+            conn.sendall(struct.pack("!i", ord(c)))
+    else:
+        for i in dic:
+            if i == s:
+                res = ""
+                res += (f"{i} : {dic[i]}")
+                f = 1
+                conn.sendall(struct.pack("!i", len(res)))
+                for c in res:
+                    conn.sendall(struct.pack("!i", ord(c)))
+    mutex.release()
+    if f == 0:
+        cerca_somma(s, conn, dic, mutex, 0)
+
+
+def print_coppie(conn, dic, mutex):
     mutex.acquire()
     if len(dic) == 0:
         print("== Nessun file ==")
-        s = "Nessun file"
+        mess = "Nessun file"
         conn.sendall(struct.pack("!i", 11))
-        for c in s:
+        for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
+    else:
+        res = ""
+        for i in dic:
+            res += (f"{i} : {dic[i]}\t")
+            conn.sendall(struct.pack("!i", len(res)))
+            for c in res:
+                conn.sendall(struct.pack("!i", ord(c)))
     mutex.release()
-
-
-def print_coppie():
-    pass
 
     
 def recv_all(conn,n): 
