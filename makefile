@@ -4,15 +4,18 @@ LDLIBS=-lm -lrt -pthread
 TARGET=farm
 
 all:
-	$(CC) farm.c apilab.c $(CFLAGS) -O0 -o $(TARGET)
+	$(CC) farm.c client.c apilab.c $(CFLAGS) -O0 -o $(TARGET)
 
-farm: farm.o xerrori.o
+client:	client.o apilab.o
+		$(CC) apilab.o client.o $(LDLIBS) -o client
+
+farm: farm.o apilab.o
 		$(CC) apilab.o farm.o  $(LDLIBS) -o farm
 
-farm.o: farm.c xerrori.h
+farm.o: farm.c apilab.h
 		$(CC) $(CFLAGS) -c -o farm.o farm.c
 
-xerrori.o: xerrori.c xerrori.h
+apilab.o: apilab.c apilab.h
 		$(CC) $(CFLAGS) -c -o apilab.o apilab.c
 
 run:

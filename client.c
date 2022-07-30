@@ -20,18 +20,78 @@ void comunicazione(long l, int event)
     serv.sin_port = htons(PORT);
     serv.sin_addr.s_addr = inet_addr(HOST);
 
-    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv) < 0))
+    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
     {
         termina("Errore apertura connessione\n");
     }
-    int dim;
+    int tmp;
     if (event)
     {
-        ;
+        char s[40];
+        sprintf(s, "%ld", l);
+        int s_len = strlen(s);
+        tmp = htonl(s_len);
+
+        e = writen(fd_skt, &tmp, sizeof(int));
+        if (e != sizeof(int))
+        {
+            termina("Errore write\n");
+        }
+        for (int i = 0; i < s_len; i++)
+        {
+            int c = htonl(s[i]);
+            e = writen(fd_skt, &c, sizeof(int));
+            if (e != sizeof(int))
+            {
+                termina("Errore write\n");
+            }
+        }
+
+        e = readn(fd_skt, &tmp, sizeof(int));
+        if (e != sizeof(int))
+        {
+            termina("Errore read\n");
+        }
+        int n = ntohl(tmp);
+        s[0] = '\0'; /* pulisco la stringa */
+        for (int i = 0; i < n; i++)
+        {
+            e = readn(fd_skt, &tmp, sizeof(int));
+            if (e != sizeof(int))
+            {
+                termina("Errore read");
+            }
+            char c = ntohl(tmp);
+            strcat(s, &c);
+        }
+        printf("%s\n", s);
     }
-    else
+    else /* stampa di tutte le coppie "somma:file" */
     {
-        ;
+        puts("\tSTAMPA TUTTE LE COPPIE");
+        tmp = -1;
+        int dim = htonl(tmp);
+        e = writen(fd_skt, &dim, sizeof(int));
+        if (e != sizeof(int))
+        {
+            termina("Errore write\n");
+        }
+        e = readn(fd_skt, &tmp, sizeof(int));
+        if (e != sizeof(int))
+        {
+            termina("Errore read\n");
+        }
+        int n = ntohl(dim);
+        printf("n = %d\n", n);
+        for (int i = 0; i < n; i++)
+        {
+            e = readn(fd_skt, &dim, sizeof(dim));
+            if (e != sizeof(int))
+            {
+                termina("Errore read\n");
+            }
+            printf("\t%d\n", ntohl(dim));
+        }
     }
     if (close(fd_skt) < 0)
     {
@@ -45,10 +105,10 @@ int main(int argc, char const *argv[])
     {
         for (int i = 1; i < argc; i++)
         {
-            comunicazione(atol(argv[i]), 0);
+            comunicazione(atol(argv[i]), 1);
         }
     }
     else /* richiesta speciale al collector */
-        comunicazione(0, 1);
+        comunicazione(0, 0);
     return 0;
 }

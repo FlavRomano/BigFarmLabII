@@ -56,11 +56,28 @@ def gestisci_connessione(conn, addr, dic, mutex):
                     dic[arr[1]] += f";{arr[0]}" 
                     mutex.release()
             else:
-                print("RICHIESTA AL CLIENT CERCARE UNA SOMMA")
+                print("RICHIESTA DEL CLIENT DI STAMPARE LE COPPIE")
+                cerca_somma(s, conn, dic, mutex)
         else:
-            print("RICHIESTA AL CLIENT DI STAMPARE LE COPPIE")
+            print("RICHIESTA DEL CLIENT CERCARE UNA SOMMA")
+            # print_coppie()
         print(f"Terminato con {addr}")
     
+
+def cerca_somma(s, conn, dic, mutex):
+    mutex.acquire()
+    if len(dic) == 0:
+        print("== Nessun file ==")
+        s = "Nessun file"
+        conn.sendall(struct.pack("!i", 11))
+        for c in s:
+            conn.sendall(struct.pack("!i", ord(c)))
+    mutex.release()
+
+
+def print_coppie():
+    pass
+
     
 def recv_all(conn,n): 
   chunks = b''
