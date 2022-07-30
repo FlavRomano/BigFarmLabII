@@ -4,7 +4,7 @@
 #define HOST "127.0.0.1" /* local host */
 #define PORT 65201
 
-void comunicazione(int event, long l)
+void comunicazione(long l, int event)
 {
     int fd_skt;
     struct sockaddr_in serv;
@@ -45,10 +45,10 @@ int main(int argc, char const *argv[])
     {
         for (int i = 1; i < argc; i++)
         {
-            comunicazione(0, atol(argv[i]));
+            comunicazione(atol(argv[i]), 0);
         }
     }
     else /* richiesta speciale al collector */
-        comunicazione(1, 0);
+        comunicazione(0, 1);
     return 0;
 }

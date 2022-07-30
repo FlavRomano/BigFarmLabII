@@ -24,7 +24,7 @@ def main(host=HOST, port=PORT):
         try:
             s.bind((host, port))
             s.listen()
-            print("\n\n==Server attivo==\n\n")
+            print("\t\t==Server attivo==\n\n")
             res = dict()
             while True:
                 conn, addr = s.accept()
@@ -32,20 +32,19 @@ def main(host=HOST, port=PORT):
                 t.start()
         except KeyboardInterrupt:
             pass
-        print(res)
+        print(f"\nDati ricevuti:",res)
         s.shutdown(socket.SHUT_RDWR)
-        print("\n\nTermino")
+        print("\nTermino")
             
             
 def gestisci_connessione(conn, addr, dic, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
-        print("dim: ",dim)
         
         if dim != -1:
             s = "".join([chr(struct.unpack("!i", recv_all(conn,4)[:4])[0]) for i in range(dim)])
-            print("ho ricevuto ", s)
+            print("\tHo ricevuto ", s)
             if ":" in s:
                 arr = s.split(":")
                 if arr[1] not in dic:
