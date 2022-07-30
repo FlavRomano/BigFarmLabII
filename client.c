@@ -69,29 +69,34 @@ void comunicazione(long l, int event)
     else /* stampa di tutte le coppie "somma:file" */
     {
         puts("\tSTAMPA TUTTE LE COPPIE");
-        tmp = -1;
-        int dim = htonl(tmp);
-        e = writen(fd_skt, &dim, sizeof(int));
+        int dim = -1;
+        tmp = htonl(dim);
+
+        e = writen(fd_skt, &tmp, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore write\n");
         }
+
         e = readn(fd_skt, &tmp, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore read\n");
         }
-        int n = ntohl(dim);
-        printf("n = %d\n", n);
+
+        int n = ntohl(tmp);
+        char s[n * 2];
         for (int i = 0; i < n; i++)
         {
-            e = readn(fd_skt, &dim, sizeof(dim));
+            e = readn(fd_skt, &tmp, sizeof(int));
             if (e != sizeof(int))
             {
-                termina("Errore read\n");
+                termina("Errore read");
             }
-            printf("\t%d\n", ntohl(dim));
+            char c = ntohl(tmp);
+            strcat(s, &c);
         }
+        printf("%s\n", s);
     }
     if (close(fd_skt) < 0)
     {

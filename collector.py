@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import sys, struct, socket, threading
+import sys, struct, socket, threading, json
 from threading import Lock
 
 HOST = "127.0.0.1"
@@ -59,8 +59,8 @@ def gestisci_connessione(conn, addr, dic, mutex):
                 print("\n\n- RICHIESTA DEL CLIENT CERCARE UNA SOMMA")
                 cerca_somma(s, conn, dic, mutex, 1)
         else:
-            print("\n\n- RICHIESTA DEL CLIENT DI STAMPARE LE COPPIE")
-            # print_coppie()
+            print("\n\n- RICHIESTA DEL CLIENT DI STAMPARE TUTTE LE COPPIE")
+            print_coppie(conn, dic, mutex)
         print(f"Terminato con {addr}")
     
 
@@ -97,12 +97,10 @@ def print_coppie(conn, dic, mutex):
         for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
     else:
-        res = ""
-        for i in dic:
-            res += (f"{i} : {dic[i]}\t")
-            conn.sendall(struct.pack("!i", len(res)))
-            for c in res:
-                conn.sendall(struct.pack("!i", ord(c)))
+        s = json.dumps(dic)
+        conn.sendall(struct.pack("!i", len(s)))
+        for c in s:
+            conn.sendall(struct.pack("!i", ord(c)))
     mutex.release()
 
     
