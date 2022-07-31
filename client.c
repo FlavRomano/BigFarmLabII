@@ -59,16 +59,15 @@ void comunicazione(long l, int event)
             e = readn(fd_skt, &tmp, sizeof(int));
             if (e != sizeof(int))
             {
-                termina("Errore read");
+                termina("Errore read\n");
             }
             char c = ntohl(tmp);
             strcat(s, &c);
         }
-        printf("%s\n", s);
+        printf("\nCLIENT:{%s}\t(risposta alla richiesta di somma %ld)\n\n", s, l);
     }
     else /* stampa di tutte le coppie "somma:file" */
     {
-        puts("\tSTAMPA TUTTE LE COPPIE");
         int dim = -1;
         tmp = htonl(dim);
 
@@ -86,7 +85,9 @@ void comunicazione(long l, int event)
 
         int n = ntohl(tmp);
         char s[n * 2];
-        for (int i = 0; i < n; i++)
+        s[0] = '\0';
+        int i;
+        for (i = 0; i < n; i++)
         {
             e = readn(fd_skt, &tmp, sizeof(int));
             if (e != sizeof(int))
@@ -96,7 +97,7 @@ void comunicazione(long l, int event)
             char c = ntohl(tmp);
             strcat(s, &c);
         }
-        printf("%s\n", s);
+        printf("\nCLIENT:%s\t(risposta alla richiesta di tutte le coppie)\n\n", s);
     }
     if (close(fd_skt) < 0)
     {

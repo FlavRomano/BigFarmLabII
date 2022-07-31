@@ -8,16 +8,17 @@ PORT = 65201
 
 
 class ClientThread(threading.Thread):
-    def __init__(self,conn,addr,res):
+    def __init__(self,conn,addr,res, files):
         threading.Thread.__init__(self)
         self.conn = conn
         self.addr = addr
         self.res = res
+        self.files = files
     def run(self):
-        print("====", self.ident, "mi occupo di", self.addr)
+        # print("====", self.ident, "mi occupo di", self.addr)
         mutex = Lock()
-        gestisci_connessione(self.conn, self.addr, self.res, mutex)
-        print("====", self.ident, "ho finito")
+        gestisci_connessione(self.conn, self.addr, self.res, self.files, mutex)
+        # print("====", self.ident, "ho finito")
 
 def main(host=HOST, port=PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -26,49 +27,50 @@ def main(host=HOST, port=PORT):
             s.listen()
             print("\t\t==Server attivo==\n\n")
             res = dict()
+            files = list()
             while True:
                 conn, addr = s.accept()
-                t = ClientThread(conn, addr, res)
+                t = ClientThread(conn, addr, res, files)
                 t.start()
         except KeyboardInterrupt:
             pass
-        print(f"\nDati ricevuti:",res)
+        print(f"\nCOLLECTOR:\tDati ricevuti:",res)
         s.shutdown(socket.SHUT_RDWR)
-        print("\nTermino")
+        print("\tTermino")
             
             
-def gestisci_connessione(conn, addr, dic, mutex):
+def gestisci_connessione(conn, addr, dic, files, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
         
         if dim != -1:
             s = "".join([chr(struct.unpack("!i", recv_all(conn,4)[:4])[0]) for i in range(dim)])
-            print("\tHo ricevuto ", s)
+            print("COLLECTOR:\tHo ricevuto ", s)
             if ":" in s:
                 arr = s.split(":")
-                if arr[1] not in dic:
-                    mutex.acquire()
+                name = arr[0]
+                l = arr[1]
+                mutex.acquire()
+                if l not in dic:
+                    files.append(arr[0])
                     dic[arr[1]] = arr[0]
-                    mutex.release()
-                else:
-                    mutex.acquire()
+                if l in dic and name not in files:
+                    files.append(arr[0])
                     dic[arr[1]] += f";{arr[0]}" 
-                    mutex.release()
+                mutex.release()
             else:
-                print("\n\n- RICHIESTA DEL CLIENT CERCARE UNA SOMMA")
                 cerca_somma(s, conn, dic, mutex, 1)
         else:
-            print("\n\n- RICHIESTA DEL CLIENT DI STAMPARE TUTTE LE COPPIE")
             print_coppie(conn, dic, mutex)
-        print(f"Terminato con {addr}")
+        print(dic,files)
+        print("COLLECTOR:\tTermino con", addr)
     
 
 def cerca_somma(s, conn, dic, mutex, flag):
     mutex.acquire()
     f = 0
     if len(dic) == 0 or flag == 0:
-        print("== Nessun file ==")
         f = 1
         mess = "Nessun file"
         conn.sendall(struct.pack("!i", 11))
@@ -91,7 +93,6 @@ def cerca_somma(s, conn, dic, mutex, flag):
 def print_coppie(conn, dic, mutex):
     mutex.acquire()
     if len(dic) == 0:
-        print("== Nessun file ==")
         mess = "Nessun file"
         conn.sendall(struct.pack("!i", 11))
         for c in mess:
@@ -114,6 +115,7 @@ def recv_all(conn,n):
     chunks += chunk
     bytes_recd = bytes_recd + len(chunk)
   return chunks
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
