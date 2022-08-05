@@ -84,6 +84,7 @@ void comunicazione(long l, int event)
         }
 
         int n = ntohl(tmp);
+        printf("%d\n", n);
         char s[n * 2];
         s[0] = '\0';
         int i;
@@ -98,6 +99,7 @@ void comunicazione(long l, int event)
             strcat(s, &c);
         }
         printf("\nCLIENT:%s\t(risposta alla richiesta di tutte le coppie)\n\n", s);
+        s[i] = '\0';
     }
     if (close(fd_skt) < 0)
     {

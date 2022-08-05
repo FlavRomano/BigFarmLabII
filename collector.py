@@ -99,7 +99,7 @@ def print_coppie(conn, dic, mutex):
             conn.sendall(struct.pack("!i", ord(c)))
     else:
         s = json.dumps(dic)
-        conn.sendall(struct.pack("!i", len(s)))
+        conn.sendall(struct.pack("!i", len(s.encode('utf-8'))))
         for c in s:
             conn.sendall(struct.pack("!i", ord(c)))
     mutex.release()

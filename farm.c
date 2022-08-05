@@ -27,10 +27,9 @@ long sum_file(char *f_name)
     FILE *f = xfopen(f_name, "rb", __HERE__);
     long x, res = 0;
     int i = 0;
-    if (f == 0x0) /* NULL è un puntatore a 0x0, quindi NULL == 0x0 */
+    if (f == NULL) /* NULL è un puntatore a 0x0, quindi NULL == 0x0 */
     {
-        fprintf(stderr, "Errore apertura file\n");
-        exit(-1);
+        termina("Errore apertura file\n");
     }
     while (fread(&x, sizeof(long), 1, f))
     {
@@ -40,18 +39,18 @@ long sum_file(char *f_name)
     return res;
 }
 
-void send_to_collector(char *res)
+void send_to_collector(char *s)
 {
     int fd_skt, res_len;
     struct sockaddr_in serv;
     size_t e;
 
     fd_skt = 0;
-    res_len = strlen(res);
-    int package[strlen(res)];
+    res_len = strlen(s);
+    int package[strlen(s)];
     for (int i = 0; i < res_len; i++)
     {
-        package[i] = (int)res[i];
+        package[i] = (int)s[i];
     }
 
     if ((fd_skt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -80,8 +79,7 @@ void send_to_collector(char *res)
         e = writen(fd_skt, &c, sizeof(int));
         if (e != sizeof(int))
         {
-            fprintf(stderr, "Errore write\n");
-            exit(-1);
+            termina("Errore write\n");
         }
     }
     if (close(fd_skt) < 0)
@@ -107,7 +105,6 @@ void *worker_body(void *arg)
         xsem_post(args->sem_free_slots, __HERE__);
         if (!strcmp(file_name, "_"))
             break;
-        // printf("%s\n", file_name);
         long sum = sum_file(file_name);
         char res[276];
         sprintf(res, "%s:%ld", file_name, sum);
@@ -218,7 +215,6 @@ int main(int argc, char **argv)
         xpthread_create(&th[i], NULL, worker_body, args, __HERE__);
     }
 
-    sleep(1);
     /* master thread */
     for (int i = 0; sign == 0 && i < num_of_files; i++)
     {
