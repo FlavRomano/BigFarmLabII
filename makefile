@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-pthread -g -Wall -O 
 LDLIBS=-lm -lrt -pthread
-TARGET=farm
+TARGET=farm client
 
 all: farm client
 

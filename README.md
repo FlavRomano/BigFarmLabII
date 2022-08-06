@@ -1,62 +1,68 @@
-# BigFarm
-Si chiede di realizzare un progetto che implementa lo schema di comunicazione tra processi e thread mostrato in figura:
-<a href="https://ibb.co/9ZTYMNM"><img src="https://i.ibb.co/41TNQ7Q/farm.png" alt="farm" border="0"></a>
+# MasterWorker (farm.c)
+`void gen_params(int argc, char **argv, int params[])`
+	Il programma prende da linea di comando:
+		- Argomenti opzionali:
+			$\mathtt{n} = \text{specifica il numero di thread WORKER del processo. Di default è 4.}$
+			$\mathtt{q}=\text{specifica la lunghezza del buffer prod/cons. Di default è 8.}$
+			$\mathtt{t}=\text{specifica il delay che intercorre tra due richieste successive al thread master.}$
+		- Nomi file.
+	Questa funzione usa getopt per riempire l'array `params[]` con i parametri e nomi file presi da linea di comando.
+`int main(int argc, char **argv)`
+Dopo aver generato l'array con i parametri `params[]`, leggo i file da linea di comando e li copio su un array allocato (sfrutto il valore `optind` che genera `getopt` in modo da sapere quanti file sono stati passati dalla linea di comando, e quindi quanto grande fare l'array).
+## Segnali
+La funzione `sigaction` è chiamata per specificare cosa fare quando arriva il segnale `SIGINT`, visto che non devo mascherare particolari segnali o fare gestioni complicate di essi, posso limitarmi ad abbinargli un handler che ho definito in modo tale da far terminare anticipatamente il processo però prima completando i task nel buffer. In particolare ho dichiarato una variabile globale `volatile sig_atomic_t sign = 0` che funge da flag all'interno del *for* dove il thread master invia i nomi dei file, quando viene inviato un `SIGINT` la guardia del *for* viene violata e si passa alla terminazione dei thread.
+## Semafori
+Utilizzo 3 semafori:
+	1. `sem_data_items` il cui valore viene inizializzato a 0, conterà il numero di elementi inseriti nel buffer.
+	2. `sem_free_slots` il cui valore viene inizializzato a `q_len`, conterà il numero di slot liberi all'interno del buffer.
+	3. `mutex` semaforo mutex (è un semaforo normale inizializzato a 0) viene utilizzato per serializzare l'accesso all'interno della sezione critica della funzione invocata dai thread worker.
+## Struct
+Ovviamente devo passare una struct (`t_args`) al thread worker che contenga tutto ciò che gli serve per operare, in particolare:
+	- `int *cindex` puntatore all'indice del buffer che consumerà il generico worker. Condiviso fra tutti i worker.
+	- `char **buffer` puntatore all'inizio del buffer. Condiviso fra tutti i worker.
+	- `int *buf_len` puntatore alla lunghezza del buffer. Condiviso fra tutti i worker.
+	- `mutex, sem_free_slots, sem_data_items` puntatori ai semafori. Condivisi fra tutti i worker.
+## Master
+È il thread che ha il compito di copiare all'interno del buffer i nomi dei file passati da linea di comando. Prima di copiare la stringa nel buffer viene chiamata una `wait` su `sem_free_slots` cosicché il thread master possa sospendersi se il buffer risulti pieno e svegliarsi solo quando viene decrementato il semaforo tramite una `post`. 
+Dopo la copia all'interno del buffer, viene chiamata una post su `sem_data_items` così da svegliare eventuali thread worker (consumatori) sospesi dopo aver trovato il buffer vuoto.
+## Worker
+Sono un insieme di thread che "consumano" i file scritti dal Master nel buffer. Il loro compito è leggere il contenuto dei file i quali nomi stanno nel buffer e calcolare la somma
+$$\sum_{i=0}^{N-1}(i\cdot\text{file}[i]))$$ 
+`N` è il numero dei `long` nel file, `file[i]` è l'i-esimo `long` del file. Questa somma viene inviata al processo collector insieme al nome del file nel formato `file_name:long_sum`.
+### Gestione concorrenza
+Viene utilizzato il classico pattern produttore-consumatore dove:
+	1. Viene chiamata una `wait` su `sem_data_items` per sospendere un worker in caso di buffer vuoto (non ha elementi da consumare).
+	2. Viene acquisita la lock tramite il semaforo `mutex` così da poter entrare in sezione critica garantendo mutua esclusione.
+	3. Rilascio la lock.
+	4. Viene chiamata una `post` su `sem_free_slots` per svegliare un eventuale thread Master sospeso perché il buffer era pieno.
+### Invio al collector
+Utilizzo la funzione `void send_to_collector(char *s)` per inviare un risultato prodotto da un worker al processo Collector. 
+Uso i socket, non posso inviare la stringa così com'è; *casto* ad `int` ogni carattere della stringa formando così una stringa di `int` da poter inviare al collector (per poterli inviare via socket).
 
-Il progetto è composto da tre processi, il primo in C denominato _MasterWorker_ (eseguibile `farm`); il secondo in Python denominato _Collector_ (eseguibile `collector.py`) il terzo in C denominato _Client_ (eseguibile `client`).
+Invio `n` byte tramite socket al collector per comunicargli la lunghezza della stringa che devo inviargli (cioè il numero di byte che deve leggere il server). Invio carattere per carattere al server la mia stringa.
 
-- _MasterWorker_ è un processo multi-threaded composto da un thread Master e da `n` thread Worker (il numero di thread Worker può essere variato utilizzando l’argomento opzionale `-n`, vedere nel seguito). Il programma prende come argomenti sulla linea di comando una lista di file binari contenenti interi lunghi (`long`) ed un certo numero di argomenti opzionali (opzioni `-n`, `-q` e `-t` discusse nelle note).
-- Il processo _Collector_ deve essere lanciato indipendentemente dal processo _MasterWorker_ e non prende argomenti sulla linea di comando. I due processi comunicano attraverso una connessione socket `INET/STREAM` (TCP) usando per semplicità l’indirizzo `localhost`. Il processo _Collector_ deve svolgere il ruolo di server e deve essere in grado di gestire più client contemporaneamente, eventualmente usando più thread.
-- Il processo _Client_ effettua delle interrogazioni al _Collector_ sui dati che ha ricevuto dal _MasterWorker_.
+Visto che un'operazione di scrittura può restituire meno di quanto specificato (es. causa buffer pieno del kernel), capiamo bene che non per forza ciò debba essere causato da un errore e quindi si dovrebbe continuare a scrivere il resto dei dati (ma con una `write` ciò non accade). Per questo motivo utilizziamo la funzione `writen`, definita *ad hoc* per invocare `write` un numero di volte necessario a scrivere tutti gli `N` byte di dati.
+### Terminazione thread
+Invio il carattere `"_"` dal master ai worker per far capire che devono fermarsi. Successivamente chiamo una `pthread_join` per tutti i thread così da:
+	1. Aspettare che i thread finiscano.
+	2. Liberare le risorse associate al thread.
 
-## MasterWorker
-1. Il processo _MasterWorker_ legge i nomi dei file passati sulla linea di comando e li passa uno alla volta (con eventuali altri parametri) ai thread Worker mediante il meccanismo produttori/consumatori. Il generico thread Worker si occupa di leggere il contenuto del file ricevuto in input e di calcolare la somma:
-![formula](https://render.githubusercontent.com/render/math?math=somma=\displaystyle\sum_{i=0}^{N-1}(i\cdot\text{file}[i]))
-	dove `N` è il numero dei `long` nel file, `file[i]` è l'i-esimo `long` del file. Questo valore deve essere inviato, unitamente al nome del file, al processo _Collector_.
-2. Deve gestire il segnale `SIGINT`. Alla ricezione di tale segnale il processo deve completare i task eventualmente presenti nel buffer/produttori consumatori e terminare dopo aver deallocato la memoria utilizzata e cancellato ogni eventuale file temporaneo. Se non viene inviato il segnale SIGINT, la procedura qui sopra deve essere seguita quando sono stati processati tutti i file passati sulla linea di comando.
-## Client
-Il processo _Client_ prende come input sulla linea di comando una sequenza di `long` e per ognuno di essi chiede al _Collector_ se ha ricevuto dal _MasterWorker_ nomi di file con associato quella somma (il _Client_ deve fare una richiesta distinta al server per ogni intero). 
+# Client (.c)
+Il client comunica con il collector. Può prendere in input da linea di comando dei long oppure nulla:
+	- Per ogni long passato da linea di comando restituisce il risultato comunica al collector la dimensione del long convertita in *network byte order* (grazie a `htonl`). Con una `readn` legge la dimensione in byte della stringa che il collector vuole restituirgli che viene convertita in *network byte order* (grazie a `ntohl`) così da poter leggere carattere per carattere tutta la stringa poi inviata dal collector.
+	- Se non passo nulla allora riceve tutti i risultati ottenuti dalla farm, legge la dimensione della stringa che vuole inviare il collector e, carattere per carattere, viene scritta dal client per poi essere restituita all'utente.
+# Collector (.py)
+È il server in ascolto sulla porta 65201 della macchina.  Nel `main` usando `with [...] as` alla fine del blocco il socket viene chiusto automaticamente. Dentro il while, con `accept` il server si blocca fino a quando arriva un client; all'arrivo di un client vengono inizializzate le variabili `conn` e `addr`:
+	- `conn` è un oggetto connessione usato per gestire la connessione.
+	- `addr` è l'indirizzo del client.
+Se riceve un'interruzione `SIGINT` (chiamata `KeyboardInterrupt` in python) allora il server restitutisce i dati ricevuti e chiude il socket.
 
-Se invece il _Client_ viene invocato senza argomenti sulla linea di comando, deve inviare una richiesta speciale al _Collector_ di elencare tutte le coppie `somma`, `nomeFile` che lui ha ricevuto. 
+La classe `ClientThread` estende la classe `Thread`, in particolare aggiungo `res` che contiene il dizionario le cui chiavi sono i risultati long e i valori i nomi del file da cui sono stati calcolati inviati dal processo `farm`.  Ho assunto che il nome di un file possa comparire solo una volta all'interno del valore di una data chiave (se la `farm` invia due volte gli stessi risultati, il contenuto di `res` rimarrà invariato dopo il primo inoltro). La classe contiene un metodo `run` che viene invocato non appena viene chiamato il metodo `start()` del thread.
 
-In ogni caso, per ogni richiesta il _Client_ deve visualizzare su `stdout` le coppie `somma`, `nome` ricevute dal server, o la stringa `Nessun file` nel caso il server non contenga coppie che soddifano i requisiti. Per convertire i valori `long` passati sulla linea di comandi il _Client_ deve usare la funzione `atol(3)`.
+Dentro il metodo `run()` inizializzo un semaforo `mutex` (usato per garantire mutua esclusione dentro la sezione critica dove si accede al dizionario di risultati) e chiamo `gestisci_connessione()`. 
 
-## Collector
-Il processo _Collector_ svolge il ruolo di un server e riceve tre tipi di richieste: 
-- (1) Dai Worker la richiesta di memorizzare una data coppia `somma`, `nomefile`.
-- (2) Dal _Client_ o la richiesta di elencare tutte le coppie, oppure (3) la richiesta di elencare le coppie con una data somma. 
-Il _Collector_ non deve rispondere nulla al primo tipo di richiesta (quella dei Worker) mentre per le richieste di tipo 2 e 3 deve restituire l'elenco delle coppie `somma`, `nomefile` ordinate per somma crescente. Il server non termina spontaneamente ma rimane sempre in attesa di nuove interrogazioni.
-
-==Fa parte dell'esercizio stabilire un protocollo per le interrogazioni al server, in quanto esso non può conoscere in anticipo quale tipo di richiesta riceverà di volta in volta (suggerimento: la richiesta dovrebbe inizare con un codice che ne indica il tipo).==
-
-# Note
-Gli argomenti che opzionalmente possono essere passati al processo MasterWorker sono i seguenti:
--   `-n nthread` specifica il numero di thread Worker del processo MasterWorker (valore di default 4).
--   `-q qlen` specifica la lunghezza del buffer produttori/consumatori (valore di default 8).
--   `-t delay` specifica un tempo in millisecondi che intercorre tra l’invio di due richieste successive ai thread Worker da parte del thread Master (serve per il debugging, valore di default 0).
-Per leggere le opzioni sulla riga di comando utilizzare la funzione `getopt(3)`.
-La dimensione dei file in input non è limitata ad un valore specifico. Si supponga che la lunghezza del nome dei file sia non superiore a 255 caratteri.
-
-# Consegna
-l repository deve contenere tutti i file del progetto oltre ai file menzionati sopra. Il makefile deve essere scritto in modo che la sequenza di istruzioni sulla linea di comando:
-```
-git clone git@github.com:user/progetto.git
-make
-./collector.py &      # parte il server in background
-./client -1           # chiede coppie con somma -1
-./farm z?.dat         # invia i file z0.dat e z1.dat
-./client 9876543210 1 # chiede coppie con somma data
-./client              # chiede tutte le coppie 
-pkill collector.py    # termina il server 
-```
-non restituisca errori e generi l'output
-```
-Nessun file        (risposta alla richiesta di somma -1)
-9876543210 z0.dat  (risposta alla richiesta di somma 9876543210)
-Nessun file        (risposta alla richiesta di somma 1)
-
-        -1 z1.dat  (risposta alla richiesta di tutte le coppie)
-9876543210 z9.dat
-```
-Verificate su `laboratorio2.di.unipi.it`, _partendo da una directory vuota_, che non ci siano errori e che l'output corrisponda. Questo è un requisito _minimo_ per la sufficienza; altri test saranno fatti durante la correzione ma sempre su `laboratorio2`, e ovviamente sarà valutato anche il codice. Il programma deve gestire in maniera pulita evenutali errori (file non esistenti, server che non risponde etc.).
-
-Il repository deve contenere anche un file README.md contenente una breve relazione che descrive le principali scelte implementative.
+Questa funzione permette lo scambio di dati tra client e server, dal client riceve inizialmente la dimensione del `long`. 
+	- Se `len(long) == -1` allora vuol dire che devo inviare al client tutto il dizionario dei risultati richiestomi.
+	- Altrimenti vuol dire che: 
+		- Deve ricevere `file_name:long`  dalla farm.
+		- Inviare al client il `file_name:long` richiesto con l'invio del `file_name` dal client.

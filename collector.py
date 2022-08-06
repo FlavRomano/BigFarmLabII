@@ -25,7 +25,7 @@ def main(host=HOST, port=PORT):
         try:
             s.bind((host, port))
             s.listen()
-            print("\t\t==Server attivo==\n\n")
+            print("\t\t== Server attivo ==\n\n")
             res = dict()
             files = list()
             while True:
@@ -44,7 +44,7 @@ def gestisci_connessione(conn, addr, dic, files, mutex):
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
         
-        if dim != -1:
+        if dim > -1:
             s = "".join([chr(struct.unpack("!i", recv_all(conn,4)[:4])[0]) for i in range(dim)])
             print("COLLECTOR:\tHo ricevuto ", s)
             if ":" in s:

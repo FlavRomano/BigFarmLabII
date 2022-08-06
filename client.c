@@ -28,8 +28,7 @@ void comunicazione(long l, int event)
     if (event)
     {
         char s[40];
-        sprintf(s, "%ld", l);
-        int s_len = strlen(s);
+        int s_len = sprintf(s, "%ld", l);
         tmp = htonl(s_len);
 
         e = writen(fd_skt, &tmp, sizeof(int));
@@ -53,8 +52,8 @@ void comunicazione(long l, int event)
             termina("Errore read\n");
         }
         int n = ntohl(tmp);
-        s[0] = '\0'; /* pulisco la stringa */
-        for (int i = 0; i < n; i++)
+        int i;
+        for (i = 0; i < n; i++)
         {
             e = readn(fd_skt, &tmp, sizeof(int));
             if (e != sizeof(int))
@@ -62,8 +61,9 @@ void comunicazione(long l, int event)
                 termina("Errore read\n");
             }
             char c = ntohl(tmp);
-            strcat(s, &c);
+            s[i] = c;
         }
+        s[i] = '\0';
         printf("\nCLIENT:{%s}\t(risposta alla richiesta di somma %ld)\n\n", s, l);
     }
     else /* stampa di tutte le coppie "somma:file" */
@@ -85,8 +85,8 @@ void comunicazione(long l, int event)
 
         int n = ntohl(tmp);
         printf("%d\n", n);
-        char s[n * 2];
-        s[0] = '\0';
+        char *s;
+        s = malloc(n + 1);
         int i;
         for (i = 0; i < n; i++)
         {
@@ -96,10 +96,11 @@ void comunicazione(long l, int event)
                 termina("Errore read");
             }
             char c = ntohl(tmp);
-            strcat(s, &c);
+            s[i] = c;
         }
-        printf("\nCLIENT:%s\t(risposta alla richiesta di tutte le coppie)\n\n", s);
         s[i] = '\0';
+        printf("\nCLIENT:%s\t(risposta alla richiesta di tutte le coppie)\n\n", s);
+        free(s);
     }
     if (close(fd_skt) < 0)
     {
