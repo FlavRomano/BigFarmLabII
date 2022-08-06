@@ -22,10 +22,10 @@ Utilizzo 3 semafori:
 3. `mutex` semaforo mutex (è un semaforo normale inizializzato a 0) viene utilizzato per serializzare l'accesso all'interno della sezione critica della funzione invocata dai thread worker.
 ## Struct
 Ovviamente devo passare una struct (`t_args`) al thread worker che contenga tutto ciò che gli serve per operare, in particolare:
-	- `int *cindex` puntatore all'indice del buffer che consumerà il generico worker. Condiviso fra tutti i worker.
-	- `char **buffer` puntatore all'inizio del buffer. Condiviso fra tutti i worker.
-	- `int *buf_len` puntatore alla lunghezza del buffer. Condiviso fra tutti i worker.
-	- `mutex, sem_free_slots, sem_data_items` puntatori ai semafori. Condivisi fra tutti i worker.
+- `int *cindex` puntatore all'indice del buffer che consumerà il generico worker. Condiviso fra tutti i worker.
+- `char **buffer` puntatore all'inizio del buffer. Condiviso fra tutti i worker.
+- `int *buf_len` puntatore alla lunghezza del buffer. Condiviso fra tutti i worker.
+- `mutex, sem_free_slots, sem_data_items` puntatori ai semafori. Condivisi fra tutti i worker.
 ## Master
 È il thread che ha il compito di copiare all'interno del buffer i nomi dei file passati da linea di comando. Prima di copiare la stringa nel buffer viene chiamata una `wait` su `sem_free_slots` cosicché il thread master possa sospendersi se il buffer risulti pieno e svegliarsi solo quando viene decrementato il semaforo tramite una `post`. 
 Dopo la copia all'interno del buffer, viene chiamata una post su `sem_data_items` così da svegliare eventuali thread worker (consumatori) sospesi dopo aver trovato il buffer vuoto.
@@ -35,10 +35,10 @@ $$\sum_{i=0}^{N-1}(i\cdot\text{file}[i]))$$
 `N` è il numero dei `long` nel file, `file[i]` è l'i-esimo `long` del file. Questa somma viene inviata al processo collector insieme al nome del file nel formato `file_name:long_sum`.
 ### Gestione concorrenza
 Viene utilizzato il classico pattern produttore-consumatore dove:
-	1. Viene chiamata una `wait` su `sem_data_items` per sospendere un worker in caso di buffer vuoto (non ha elementi da consumare).
-	2. Viene acquisita la lock tramite il semaforo `mutex` così da poter entrare in sezione critica garantendo mutua esclusione.
-	3. Rilascio la lock.
-	4. Viene chiamata una `post` su `sem_free_slots` per svegliare un eventuale thread Master sospeso perché il buffer era pieno.
+1. Viene chiamata una `wait` su `sem_data_items` per sospendere un worker in caso di buffer vuoto (non ha elementi da consumare).
+2. Viene acquisita la lock tramite il semaforo `mutex` così da poter entrare in sezione critica garantendo mutua esclusione.
+3. Rilascio la lock.
+4. Viene chiamata una `post` su `sem_free_slots` per svegliare un eventuale thread Master sospeso perché il buffer era pieno.
 ### Invio al collector
 Utilizzo la funzione `void send_to_collector(char *s)` per inviare un risultato prodotto da un worker al processo Collector. 
 Uso i socket, non posso inviare la stringa così com'è; *casto* ad `int` ogni carattere della stringa formando così una stringa di `int` da poter inviare al collector (per poterli inviare via socket).
@@ -53,12 +53,12 @@ Invio il carattere `"_"` dal master ai worker per far capire che devono fermarsi
 
 # Client (.c)
 Il client comunica con il collector. Può prendere in input da linea di comando dei long oppure nulla:
-	- Per ogni long passato da linea di comando restituisce il risultato comunica al collector la dimensione del long convertita in *network byte order* (grazie a `htonl`). Con una `readn` legge la dimensione in byte della stringa che il collector vuole restituirgli che viene convertita in *network byte order* (grazie a `ntohl`) così da poter leggere carattere per carattere tutta la stringa poi inviata dal collector.
-	- Se non passo nulla allora riceve tutti i risultati ottenuti dalla farm, legge la dimensione della stringa che vuole inviare il collector e, carattere per carattere, viene scritta dal client per poi essere restituita all'utente.
+- Per ogni long passato da linea di comando restituisce il risultato comunica al collector la dimensione del long convertita in *network byte order* (grazie a `htonl`). Con una `readn` legge la dimensione in byte della stringa che il collector vuole restituirgli che viene convertita in *network byte order* (grazie a `ntohl`) così da poter leggere carattere per carattere tutta la stringa poi inviata dal collector.
+- Se non passo nulla allora riceve tutti i risultati ottenuti dalla farm, legge la dimensione della stringa che vuole inviare il collector e, carattere per carattere, viene scritta dal client per poi essere restituita all'utente.
 # Collector (.py)
 È il server in ascolto sulla porta 65201 della macchina.  Nel `main` usando `with [...] as` alla fine del blocco il socket viene chiusto automaticamente. Dentro il while, con `accept` il server si blocca fino a quando arriva un client; all'arrivo di un client vengono inizializzate le variabili `conn` e `addr`:
-	- `conn` è un oggetto connessione usato per gestire la connessione.
-	- `addr` è l'indirizzo del client.
+- `conn` è un oggetto connessione usato per gestire la connessione.
+- `addr` è l'indirizzo del client.
 Se riceve un'interruzione `SIGINT` (chiamata `KeyboardInterrupt` in python) allora il server restitutisce i dati ricevuti e chiude il socket.
 
 La classe `ClientThread` estende la classe `Thread`, in particolare aggiungo `res` che contiene il dizionario le cui chiavi sono i risultati long e i valori i nomi del file da cui sono stati calcolati inviati dal processo `farm`.  Ho assunto che il nome di un file possa comparire solo una volta all'interno del valore di una data chiave (se la `farm` invia due volte gli stessi risultati, il contenuto di `res` rimarrà invariato dopo il primo inoltro). La classe contiene un metodo `run` che viene invocato non appena viene chiamato il metodo `start()` del thread.
@@ -66,7 +66,7 @@ La classe `ClientThread` estende la classe `Thread`, in particolare aggiungo `re
 Dentro il metodo `run()` inizializzo un semaforo `mutex` (usato per garantire mutua esclusione dentro la sezione critica dove si accede al dizionario di risultati) e chiamo `gestisci_connessione()`. 
 
 Questa funzione permette lo scambio di dati tra client e server, dal client riceve inizialmente la dimensione del `long`. 
-	- Se `len(long) == -1` allora vuol dire che devo inviare al client tutto il dizionario dei risultati richiestomi.
-	- Altrimenti vuol dire che: 
-		- Deve ricevere `file_name:long`  dalla farm.
-		- Inviare al client il `file_name:long` richiesto con l'invio del `file_name` dal client.
+- Se `len(long) == -1` allora vuol dire che devo inviare al client tutto il dizionario dei risultati richiestomi.
+- Altrimenti vuol dire che: 
+	- Deve ricevere `file_name:long`  dalla farm.
+	- Inviare al client il `file_name:long` richiesto con l'invio del `file_name` dal client.
