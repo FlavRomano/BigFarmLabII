@@ -13,9 +13,9 @@ Dopo aver generato l'array con i parametri `params[]`, leggo i file da linea di 
 La funzione `sigaction` è chiamata per specificare cosa fare quando arriva il segnale `SIGINT`, visto che non devo mascherare particolari segnali o fare gestioni complicate di essi, posso limitarmi ad abbinargli un handler che ho definito in modo tale da far terminare anticipatamente il processo però prima completando i task nel buffer. In particolare ho dichiarato una variabile globale `volatile sig_atomic_t sign = 0` che funge da flag all'interno del *for* dove il thread master invia i nomi dei file, quando viene inviato un `SIGINT` la guardia del *for* viene violata e si passa alla terminazione dei thread.
 ## Semafori
 Utilizzo 3 semafori:
-	1. `sem_data_items` il cui valore viene inizializzato a 0, conterà il numero di elementi inseriti nel buffer.
-	2. `sem_free_slots` il cui valore viene inizializzato a `q_len`, conterà il numero di slot liberi all'interno del buffer.
-	3. `mutex` semaforo mutex (è un semaforo normale inizializzato a 0) viene utilizzato per serializzare l'accesso all'interno della sezione critica della funzione invocata dai thread worker.
+1. `sem_data_items` il cui valore viene inizializzato a 0, conterà il numero di elementi inseriti nel buffer.
+2. `sem_free_slots` il cui valore viene inizializzato a `q_len`, conterà il numero di slot liberi all'interno del buffer.
+3. `mutex` semaforo mutex (è un semaforo normale inizializzato a 0) viene utilizzato per serializzare l'accesso all'interno della sezione critica della funzione invocata dai thread worker.
 ## Struct
 Ovviamente devo passare una struct (`t_args`) al thread worker che contenga tutto ciò che gli serve per operare, in particolare:
 	- `int *cindex` puntatore all'indice del buffer che consumerà il generico worker. Condiviso fra tutti i worker.
