@@ -7,6 +7,7 @@ Il programma prende da linea di comando:
 	- q = specifica la lunghezza del buffer prod/cons. Di default è 8.
 	- t = specifica il delay che intercorre tra due richieste successive al thread master.
 - Nomi file.
+
 Questa funzione usa `getopt` per riempire l'array `params[]` con i parametri e nomi file presi da linea di comando.
 	
 `int main(int argc, char **argv)`
