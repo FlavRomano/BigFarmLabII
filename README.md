@@ -1,13 +1,16 @@
 # MasterWorker (farm.c)
 `void gen_params(int argc, char **argv, int params[])`
-	Il programma prende da linea di comando:
+
+Il programma prende da linea di comando:
 		- Argomenti opzionali:
-			$\mathtt{n} = \text{specifica il numero di thread WORKER del processo. Di default è 4.}$
-			$\mathtt{q}=\text{specifica la lunghezza del buffer prod/cons. Di default è 8.}$
-			$\mathtt{t}=\text{specifica il delay che intercorre tra due richieste successive al thread master.}$
+			n = specifica il numero di thread WORKER del processo. Di default è 4.
+			q = specifica la lunghezza del buffer prod/cons. Di default è 8.
+			t = specifica il delay che intercorre tra due richieste successive al thread master.
 		- Nomi file.
-	Questa funzione usa getopt per riempire l'array `params[]` con i parametri e nomi file presi da linea di comando.
+	Questa funzione usa `getopt` per riempire l'array `params[]` con i parametri e nomi file presi da linea di comando.
+	
 `int main(int argc, char **argv)`
+
 Dopo aver generato l'array con i parametri `params[]`, leggo i file da linea di comando e li copio su un array allocato (sfrutto il valore `optind` che genera `getopt` in modo da sapere quanti file sono stati passati dalla linea di comando, e quindi quanto grande fare l'array).
 ## Segnali
 La funzione `sigaction` è chiamata per specificare cosa fare quando arriva il segnale `SIGINT`, visto che non devo mascherare particolari segnali o fare gestioni complicate di essi, posso limitarmi ad abbinargli un handler che ho definito in modo tale da far terminare anticipatamente il processo però prima completando i task nel buffer. In particolare ho dichiarato una variabile globale `volatile sig_atomic_t sign = 0` che funge da flag all'interno del *for* dove il thread master invia i nomi dei file, quando viene inviato un `SIGINT` la guardia del *for* viene violata e si passa alla terminazione dei thread.
