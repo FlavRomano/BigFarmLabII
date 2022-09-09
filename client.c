@@ -84,7 +84,6 @@ void comunicazione(long l, int event)
         }
 
         int n = ntohl(tmp);
-        printf("%d\n", n);
         char *s;
         s = malloc(n + 1);
         int i;
