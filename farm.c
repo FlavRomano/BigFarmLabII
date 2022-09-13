@@ -137,7 +137,7 @@ void gen_params(int argc, char **argv, int params[])
             break;
         case 'q':
             x = atoi(optarg);
-            if (x <= 1)
+            if (x < 1)
             {
                 fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", x);
                 exit(1);
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
     int params[3]; /* 0. nthread ; 1. qlen ; 2. delay */
     if (argc < 2)
     {
-        printf("Uso: %s file [file ...] \n", argv[0]);
+        printf("Uso: %s {-n | -q | -d} file [file ...]\n", argv[0]);
         return 1;
     }
     gen_params(argc, argv, params);
