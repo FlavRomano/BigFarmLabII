@@ -2,7 +2,7 @@
 
 #define _GNU_SOURCE
 #define HOST "127.0.0.1" /* local host */
-#define PORT 65201
+#define PORT 65203
 
 void comunicazione(long l, int event)
 {
@@ -27,7 +27,7 @@ void comunicazione(long l, int event)
     int tmp;
     if (event)
     {
-        char s[40];
+        char s[1024];
         int s_len = sprintf(s, "%ld", l);
         tmp = htonl(s_len);
 
@@ -64,7 +64,7 @@ void comunicazione(long l, int event)
             s[i] = c;
         }
         s[i] = '\0';
-        printf("\nCLIENT:{%s}\t(risposta alla richiesta di somma %ld)\n\n", s, l);
+        printf("%s\n", s);
     }
     else /* stampa di tutte le coppie "somma:file" */
     {
@@ -98,7 +98,7 @@ void comunicazione(long l, int event)
             s[i] = c;
         }
         s[i] = '\0';
-        printf("\nCLIENT:%s\t(risposta alla richiesta di tutte le coppie)\n\n", s);
+        printf("%s", s);
         free(s);
     }
     if (close(fd_skt) < 0)

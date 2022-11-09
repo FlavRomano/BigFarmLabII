@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 
-import sys, struct, socket, threading, json
+import sys, struct, socket, threading
 from threading import Lock
 
 HOST = "127.0.0.1"
-PORT = 65201
+PORT = 65203
 
 
 class ClientThread(threading.Thread):
@@ -17,7 +17,7 @@ class ClientThread(threading.Thread):
     def run(self):
         # print("====", self.ident, "mi occupo di", self.addr)
         mutex = Lock()
-        gestisci_connessione(self.conn, self.addr, self.res, self.files, mutex)
+        gestisci_connessione(self.conn, self.res, self.files, mutex)
         # print("====", self.ident, "ho finito")
 
 def main(host=HOST, port=PORT):
@@ -33,20 +33,17 @@ def main(host=HOST, port=PORT):
                 t = ClientThread(conn, addr, res, files)
                 t.start()
         except KeyboardInterrupt:
-            pass
-        print(f"\nCOLLECTOR:\tDati ricevuti:",res)
+           pass
         s.shutdown(socket.SHUT_RDWR)
-        print("\tTermino")
             
             
-def gestisci_connessione(conn, addr, dic, files, mutex):
+def gestisci_connessione(conn, dic:dict, files, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
         
         if dim > -1:
             s = "".join([chr(struct.unpack("!i", recv_all(conn,4)[:4])[0]) for i in range(dim)])
-            print("COLLECTOR:\tHo ricevuto ", s)
             if ":" in s:
                 arr = s.split(":")
                 name = arr[0]
@@ -57,14 +54,12 @@ def gestisci_connessione(conn, addr, dic, files, mutex):
                     dic[arr[1]] = arr[0]
                 if l in dic and name not in files:
                     files.append(arr[0])
-                    dic[arr[1]] += f";{arr[0]}" 
+                    dic[arr[1]] += f" {arr[0]}" 
                 mutex.release()
             else:
                 cerca_somma(s, conn, dic, mutex, 1)
         else:
             print_coppie(conn, dic, mutex)
-        print(dic,files)
-        print("COLLECTOR:\tTermino con", addr)
     
 
 def cerca_somma(s, conn, dic, mutex, flag):
@@ -73,24 +68,24 @@ def cerca_somma(s, conn, dic, mutex, flag):
     if len(dic) == 0 or flag == 0:
         f = 1
         mess = "Nessun file"
-        conn.sendall(struct.pack("!i", 11))
+        conn.sendall(struct.pack("!i", len(mess)))
         for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
     else:
-        for i in dic:
-            if i == s:
+        for k in dic:
+            if k == s:
                 res = ""
-                res += (f"{i} : {dic[i]}")
+                res += (f"{k:>12} {dic.get(k)}")
                 f = 1
                 conn.sendall(struct.pack("!i", len(res)))
                 for c in res:
                     conn.sendall(struct.pack("!i", ord(c)))
     mutex.release()
     if f == 0:
-        cerca_somma(s, conn, dic, mutex, 0)
+        cerca_somma(s, conn, dic, mutex, f)
 
 
-def print_coppie(conn, dic, mutex):
+def print_coppie(conn, dic:dict, mutex):
     mutex.acquire()
     if len(dic) == 0:
         mess = "Nessun file"
@@ -98,7 +93,9 @@ def print_coppie(conn, dic, mutex):
         for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
     else:
-        s = json.dumps(dic)
+        s = ""
+        for k in dic:
+            s += f"{k:>12} {dic.get(k)}\n"
         conn.sendall(struct.pack("!i", len(s.encode('utf-8'))))
         for c in s:
             conn.sendall(struct.pack("!i", ord(c)))

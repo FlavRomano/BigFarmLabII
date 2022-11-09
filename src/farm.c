@@ -3,7 +3,7 @@
 #define _GNU_SOURCE
 #define __HERE__ __LINE__, __FILE__
 #define HOST "127.0.0.1" /* local host */
-#define PORT 65201
+#define PORT 65203
 
 typedef struct
 {
@@ -17,7 +17,7 @@ typedef struct
 
 volatile sig_atomic_t sign = 0;
 
-void handler(int s)
+void handler()
 {
     sign = 1;
 }
@@ -27,7 +27,7 @@ long sum_file(char *f_name)
     FILE *f = xfopen(f_name, "rb", __HERE__);
     long x, res = 0;
     int i = 0;
-    if (f == NULL) /* NULL è un puntatore a 0x0, quindi NULL == 0x0 */
+    if (f == NULL)
     {
         termina("Errore apertura file\n");
     }
@@ -86,7 +86,6 @@ void send_to_collector(char *s)
     {
         termina("Errore chiusura socket\n");
     }
-    printf("==Messaggio inviato==\n");
 }
 
 void *worker_body(void *arg)
@@ -108,7 +107,6 @@ void *worker_body(void *arg)
         long sum = sum_file(file_name);
         char res[276];
         sprintf(res, "%s:%ld", file_name, sum);
-        printf("\tIl thread %d ha restituito %s\n", gettid(), res);
         send_to_collector(res);
     } while (true);
     pthread_exit(NULL);

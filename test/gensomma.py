@@ -35,7 +35,7 @@ def genera(args):
   val = random.randint(-10000, 10000)
   a.append(val)
   print("Somma:",tot)
-  nome  = args.nomeFile + str(tot)
+  nome  = "test-" + str(tot)
   with open(nome,"wb") as f:
     for i in range(args.n-1,-1,-1):
       f.write(struct.pack("<q",a[i]))
@@ -45,9 +45,9 @@ def main():
   parser = argparse.ArgumentParser(description=Description, formatter_class=argparse.RawTextHelpFormatter)
   parser.add_argument('-n', help='numero di interi (default 100)', default=100, type=int)  
   parser.add_argument('-s', help='somma (default random)', type=int)  
-  parser.add_argument('nomeFile')
   args = parser.parse_args()
-  genera(args)
+  for i in range(0,7501):
+    genera(args)
 
 if __name__ == '__main__':
   main()
