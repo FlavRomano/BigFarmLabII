@@ -11,8 +11,6 @@ INCDIR=./include
 
 objects=apilab.o farm.o client.o
 
-.PHONY: clean
-
 apilab.o: $(SRCDIR)/apilab.c $(INCDIR)/apilab.h
 		$(CC) $(CFLAGS) -c -o $(OBJDIR)/apilab.o $(SRCDIR)/apilab.c
 
@@ -22,10 +20,10 @@ farm.o: $(SRCDIR)/farm.c $(INCDIR)/apilab.h
 client.o: $(SRCDIR)/client.c $(INCDIR)/apilab.h
 		$(CC) $(CFLAGS) -c -o $(OBJDIR)/client.o $(SRCDIR)/client.c
 
-farm: $(OBJDIR)/farm.o $(OBJDIR)/apilab.o
+farm: farm.o apilab.o
 		$(CC) $(OBJDIR)/apilab.o $(OBJDIR)/farm.o  $(LDLIBS) -o $(OUTDIR)/farm
 
-client:	$(OBJDIR)/client.o $(OBJDIR)/apilab.o
+client:	client.o apilab.o
 		$(CC) $(OBJDIR)/apilab.o $(OBJDIR)/client.o $(LDLIBS) -o $(OUTDIR)/client
 
 all: farm client
