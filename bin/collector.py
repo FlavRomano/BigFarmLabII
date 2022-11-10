@@ -87,7 +87,7 @@ def cerca_somma(s, conn, dic, mutex, flag):
         cerca_somma(s, conn, dic, mutex, f)
 
 
-def print_coppie(conn, dic:dict, mutex):
+def print_coppie(conn, dic, mutex):
     mutex.acquire()
     if len(dic) == 0:
         mess = f"{'Nessun file' : >12}\n"
