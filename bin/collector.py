@@ -18,10 +18,8 @@ class ClientThread(threading.Thread):
         self.res = res
         self.files = files
     def run(self):
-        # print("====", self.ident, "mi occupo di", self.addr)
         mutex = Lock()
         gestisci_connessione(self.conn, self.res, self.files, mutex)
-        # print("====", self.ident, "ho finito")
 
 def main(host=HOST, port=PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -36,7 +34,7 @@ def main(host=HOST, port=PORT):
                 t = ClientThread(conn, addr, res, files)
                 t.start()
         except KeyboardInterrupt:
-           pass
+            pass
         s.shutdown(socket.SHUT_RDWR)
             
             
