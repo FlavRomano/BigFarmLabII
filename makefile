@@ -4,8 +4,8 @@ OBJDIR=./build
 HEADERDIR=./include
 
 CC=gcc
-CFLAGS=-I$(HEADERDIR) -pthread -g -Wall -O 
-LDLIBS=-lm -lrt -pthread
+CFLAGS=-I$(HEADERDIR) -pthread -g -Wall
+LDLIBS=-lm -lrt -pthread # Library flags or linker stuffs
 
 TARGET=farm client
 
