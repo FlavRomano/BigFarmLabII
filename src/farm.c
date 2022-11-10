@@ -1,4 +1,5 @@
 #include "apilab.h"
+#include <libgen.h>
 
 #define _GNU_SOURCE
 #define __HERE__ __LINE__, __FILE__
@@ -91,7 +92,8 @@ void send_to_collector(char *s)
 void *worker_body(void *arg)
 {
     t_args *args = (t_args *)arg;
-    char file_name[1024];
+    char *file_name;
+    long sum;
     do
     {
         xsem_wait(args->sem_data_items, __HERE__);
@@ -99,21 +101,28 @@ void *worker_body(void *arg)
 
         int i = *(args->cindex);
         int size_buffer = *(args->buf_len);
-        strcpy(file_name, args->buffer[i % size_buffer]);
+        size_t file_path_len = snprintf(NULL, 0, "%s", args->buffer[i % size_buffer]);
+        char *file_path = malloc(file_path_len + 1);
+        strcpy(file_path, args->buffer[i % size_buffer]);
         *(args->cindex) += 1;
 
         xpthread_mutex_unlock(args->mutex, __HERE__);
         xsem_post(args->sem_free_slots, __HERE__);
 
-        if (!strcmp(file_name, "_"))
+        if (!strcmp(file_path, "_"))
+        {
+            free(file_path);
             break;
+        }
 
-        long sum = sum_file(file_name);
+        sum = sum_file(file_path);
+        file_name = basename(file_path);
         size_t res_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
         char *res = malloc(res_len + 1);
         sprintf(res, "%s:%ld", file_name, sum);
         send_to_collector(res);
         free(res);
+        free(file_path);
     } while (true);
     pthread_exit(NULL);
 }
@@ -201,7 +210,7 @@ int main(int argc, char **argv)
     char *buffer[params[1]];
     for (int i = 0; i < params[1]; i++)
     {
-        buffer[i] = malloc(255);
+        buffer[i] = malloc(4097);
     }
     int pindex = 0, cindex = 0;
 
