@@ -110,7 +110,7 @@ void *worker_body(void *arg)
 
         long sum = sum_file(file_name);
         size_t res_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
-        char *res = malloc(res_len);
+        char *res = malloc(res_len + 1);
         sprintf(res, "%s:%ld", file_name, sum);
         send_to_collector(res);
         free(res);

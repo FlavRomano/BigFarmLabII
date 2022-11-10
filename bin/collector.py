@@ -24,6 +24,7 @@ class ClientThread(threading.Thread):
 def main(host=HOST, port=PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # for avoiding [Errno 98] Address already in use 
             s.bind((host, port))
             s.listen()
             print("\t\t== Server attivo ==")
@@ -68,7 +69,7 @@ def cerca_somma(s, conn, dic, mutex, flag):
     f = 0
     if len(dic) == 0 or flag == 0:
         f = 1
-        mess = "Nessun file"
+        mess = f"{'Nessun file' : >12}"
         conn.sendall(struct.pack("!i", len(mess)))
         for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
@@ -76,7 +77,7 @@ def cerca_somma(s, conn, dic, mutex, flag):
         for k in dic:
             if k == s:
                 res = ""
-                res += (f"{k:>12} {dic.get(k)}")
+                res += (f"{k : >12} {dic.get(k)}")
                 f = 1
                 conn.sendall(struct.pack("!i", len(res)))
                 for c in res:
@@ -89,8 +90,8 @@ def cerca_somma(s, conn, dic, mutex, flag):
 def print_coppie(conn, dic:dict, mutex):
     mutex.acquire()
     if len(dic) == 0:
-        mess = "Nessun file"
-        conn.sendall(struct.pack("!i", 11))
+        mess = f"{'Nessun file' : >12}\n"
+        conn.sendall(struct.pack("!i", len(mess)))
         for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
     else:
