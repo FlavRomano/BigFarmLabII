@@ -39,7 +39,7 @@ def main(host=HOST, port=PORT):
         s.shutdown(socket.SHUT_RDWR)
             
             
-def gestisci_connessione(conn, dic:dict, files, mutex):
+def gestisci_connessione(conn, dic, files, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
