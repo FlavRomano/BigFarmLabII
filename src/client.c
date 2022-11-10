@@ -5,27 +5,13 @@
 #define HOST "127.0.0.1" /* local host */
 #define PORT 65201
 
-void ricezione(int fd_skt, int s_request)
+typedef struct
 {
-    int n = ntohl(s_request);
-    char *server_response = malloc(n + 1);
-    int i, e;
-    for (i = 0; i < n; i++)
-    {
-        e = readn(fd_skt, &s_request, sizeof(int));
-        if (e != sizeof(int))
-        {
-            termina("Errore read");
-        }
-        char c = ntohl(s_request);
-        server_response[i] = c;
-    }
-    server_response[i] = '\0';
-    printf("%s\n", server_response);
-    free(server_response);
-}
+    int fd_skt;
+    int type_server_request;
+} segment;
 
-void comunicazione(long l, bool richiesta_singola)
+segment *comunicazione(long l, bool richiesta_singola)
 {
     int fd_skt;
     struct sockaddr_in serv;
@@ -53,7 +39,6 @@ void comunicazione(long l, bool richiesta_singola)
         char client_long[client_long_len];
         sprintf(client_long, "%ld", l);
         s_request = htonl(client_long_len);
-
         e = writen(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
@@ -68,47 +53,69 @@ void comunicazione(long l, bool richiesta_singola)
                 termina("Errore write");
             }
         }
-
-        e = readn(fd_skt, &s_request, sizeof(int));
-        if (e != sizeof(int))
-        {
-            termina("Errore read");
-        }
-        ricezione(fd_skt, s_request);
     }
     else /* stampa di tutte le coppie "somma:file" */
     {
         s_request = htonl(-1);
-
         e = writen(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore write");
         }
+    }
+    e = readn(fd_skt, &s_request, sizeof(int));
+    if (e != sizeof(int))
+    {
+        termina("Errore read");
+    }
+    segment *s = malloc(sizeof(segment));
+    s->fd_skt = fd_skt;
+    s->type_server_request = s_request;
+    return s;
+}
 
+void ricezione(segment *s)
+{
+    int fd_skt = s->fd_skt;
+    int s_request = s->type_server_request;
+    int n = ntohl(s_request);
+    char *server_response = malloc(n + 1);
+    int i, e;
+    for (i = 0; i < n; i++)
+    {
         e = readn(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore read");
         }
-        ricezione(fd_skt, s_request);
+        char c = ntohl(s_request);
+        server_response[i] = c;
     }
     if (close(fd_skt) < 0)
     {
         termina("Errore chiusura socket");
     }
+    server_response[i] = '\0';
+    printf("%s", server_response);
+    free(server_response);
+    free(s);
 }
 
 int main(int argc, char const *argv[])
 {
-    if (argc > 1)
+    bool richiesta_singola = argc > 1;
+    if (richiesta_singola)
     {
         for (int i = 1; i < argc; i++)
         {
-            comunicazione(atol(argv[i]), true);
+            segment *s = comunicazione(atol(argv[i]), true);
+            ricezione(s);
         }
     }
-    else /* richiesta speciale al collector */
-        comunicazione(0, false);
+    else
+    {
+        segment *s = comunicazione(0, false);
+        ricezione(s);
+    }
     return 0;
 }

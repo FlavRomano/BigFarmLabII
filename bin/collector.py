@@ -69,7 +69,7 @@ def cerca_somma(s, conn, dic, mutex, flag):
     f = 0
     if len(dic) == 0 or flag == 0:
         f = 1
-        mess = f"{'Nessun file' : >12}"
+        mess = f"{'Nessun file' : >12}\n"
         conn.sendall(struct.pack("!i", len(mess)))
         for c in mess:
             conn.sendall(struct.pack("!i", ord(c)))
@@ -77,7 +77,7 @@ def cerca_somma(s, conn, dic, mutex, flag):
         for k in dic:
             if k == s:
                 res = ""
-                res += (f"{k : >12} {dic.get(k)}")
+                res += (f"{k : >12} {dic.get(k)}\n")
                 f = 1
                 conn.sendall(struct.pack("!i", len(res)))
                 for c in res:
