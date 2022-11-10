@@ -56,7 +56,7 @@ def gestisci_connessione(conn, dic, files, mutex):
                     dic[arr[1]] = arr[0]
                 if l in dic and name not in files:
                     files.append(arr[0])
-                    dic[arr[1]] += f" {arr[0]}" 
+                    dic[arr[1]] += f", {arr[0]}" 
                 mutex.release()
             else:
                 cerca_somma(s, conn, dic, mutex, 1)
