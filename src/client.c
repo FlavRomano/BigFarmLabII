@@ -29,19 +29,19 @@ void comunicazione(long l, bool richiesta_singola)
     int request;
     if (richiesta_singola)
     {
-        size_t send_long_len = snprintf(NULL, 0, "%ld", l);
-        char send_long[send_long_len];
-        sprintf(send_long, "%ld", l);
-        request = htonl(send_long_len);
+        size_t client_long_len = snprintf(NULL, 0, "%ld", l);
+        char client_long[client_long_len];
+        sprintf(client_long, "%ld", l);
+        request = htonl(client_long_len);
 
         e = writen(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore write");
         }
-        for (int i = 0; i < send_long_len; i++)
+        for (int i = 0; i < client_long_len; i++)
         {
-            int c = htonl(send_long[i]);
+            int c = htonl(client_long[i]);
             e = writen(fd_skt, &c, sizeof(int));
             if (e != sizeof(int))
             {
@@ -55,7 +55,7 @@ void comunicazione(long l, bool richiesta_singola)
             termina("Errore read");
         }
         int n = ntohl(request);
-        char *buffer = malloc(n);
+        char *server_response = malloc(n + 1);
         int i;
         for (i = 0; i < n; i++)
         {
@@ -65,11 +65,11 @@ void comunicazione(long l, bool richiesta_singola)
                 termina("Errore read");
             }
             char c = ntohl(request);
-            buffer[i] = c;
+            server_response[i] = c;
         }
-        buffer[i] = '\0';
-        printf("%s\n", buffer);
-        free(buffer);
+        server_response[i] = '\0';
+        printf("%s\n", server_response);
+        free(server_response);
     }
     else /* stampa di tutte le coppie "somma:file" */
     {
@@ -88,8 +88,7 @@ void comunicazione(long l, bool richiesta_singola)
         }
 
         int n = ntohl(request);
-        char *s;
-        s = malloc(n + 1);
+        char *server_response = malloc(n + 1);
         int i;
         for (i = 0; i < n; i++)
         {
@@ -99,11 +98,11 @@ void comunicazione(long l, bool richiesta_singola)
                 termina("Errore read");
             }
             char c = ntohl(request);
-            s[i] = c;
+            server_response[i] = c;
         }
-        s[i] = '\0';
-        printf("%s", s);
-        free(s);
+        server_response[i] = '\0';
+        printf("%s", server_response);
+        free(server_response);
     }
     if (close(fd_skt) < 0)
     {

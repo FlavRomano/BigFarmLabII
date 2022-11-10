@@ -35,7 +35,7 @@ long sum_file(char *f_name)
     {
         res += (i++ * x);
     }
-
+    fclose(f);
     return res;
 }
 
@@ -241,11 +241,12 @@ int main(int argc, char **argv)
         xpthread_join(th[i], NULL, __HERE__);
     }
 
-    free(files);
+    free(args);
     for (int i = 0; i < params[1]; i++)
     {
         free(buffer[i]);
     }
+    free(files);
     sem_destroy(&sem_data_items);
     sem_destroy(&sem_free_slots);
     xpthread_mutex_destroy(&cmutex, __HERE__);
