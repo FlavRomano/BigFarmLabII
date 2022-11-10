@@ -5,6 +5,26 @@
 #define HOST "127.0.0.1" /* local host */
 #define PORT 65201
 
+void ricezione(int fd_skt, int s_request)
+{
+    int n = ntohl(s_request);
+    char *server_response = malloc(n + 1);
+    int i, e;
+    for (i = 0; i < n; i++)
+    {
+        e = readn(fd_skt, &s_request, sizeof(int));
+        if (e != sizeof(int))
+        {
+            termina("Errore read");
+        }
+        char c = ntohl(s_request);
+        server_response[i] = c;
+    }
+    server_response[i] = '\0';
+    printf("%s\n", server_response);
+    free(server_response);
+}
+
 void comunicazione(long l, bool richiesta_singola)
 {
     int fd_skt;
@@ -26,15 +46,15 @@ void comunicazione(long l, bool richiesta_singola)
         termina("Errore apertura connessione");
     }
 
-    int request;
+    int s_request;
     if (richiesta_singola)
     {
         size_t client_long_len = snprintf(NULL, 0, "%ld", l);
         char client_long[client_long_len];
         sprintf(client_long, "%ld", l);
-        request = htonl(client_long_len);
+        s_request = htonl(client_long_len);
 
-        e = writen(fd_skt, &request, sizeof(int));
+        e = writen(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore write");
@@ -49,60 +69,29 @@ void comunicazione(long l, bool richiesta_singola)
             }
         }
 
-        e = readn(fd_skt, &request, sizeof(int));
+        e = readn(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore read");
         }
-        int n = ntohl(request);
-        char *server_response = malloc(n + 1);
-        int i;
-        for (i = 0; i < n; i++)
-        {
-            e = readn(fd_skt, &request, sizeof(int));
-            if (e != sizeof(int))
-            {
-                termina("Errore read");
-            }
-            char c = ntohl(request);
-            server_response[i] = c;
-        }
-        server_response[i] = '\0';
-        printf("%s\n", server_response);
-        free(server_response);
+        ricezione(fd_skt, s_request);
     }
     else /* stampa di tutte le coppie "somma:file" */
     {
-        request = htonl(-1);
+        s_request = htonl(-1);
 
-        e = writen(fd_skt, &request, sizeof(int));
+        e = writen(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore write");
         }
 
-        e = readn(fd_skt, &request, sizeof(int));
+        e = readn(fd_skt, &s_request, sizeof(int));
         if (e != sizeof(int))
         {
             termina("Errore read");
         }
-
-        int n = ntohl(request);
-        char *server_response = malloc(n + 1);
-        int i;
-        for (i = 0; i < n; i++)
-        {
-            e = readn(fd_skt, &request, sizeof(int));
-            if (e != sizeof(int))
-            {
-                termina("Errore read");
-            }
-            char c = ntohl(request);
-            server_response[i] = c;
-        }
-        server_response[i] = '\0';
-        printf("%s", server_response);
-        free(server_response);
+        ricezione(fd_skt, s_request);
     }
     if (close(fd_skt) < 0)
     {
