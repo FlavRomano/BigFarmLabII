@@ -1,10 +1,13 @@
 #! /usr/bin/env python3
 
-import sys, struct, socket, threading
+import socket
+import struct
+import sys
+import threading
 from threading import Lock
 
 HOST = "127.0.0.1"
-PORT = 65203
+PORT = 65201
 
 
 class ClientThread(threading.Thread):
@@ -25,7 +28,7 @@ def main(host=HOST, port=PORT):
         try:
             s.bind((host, port))
             s.listen()
-            print("\t\t== Server attivo ==\n\n")
+            print("\t\t== Server attivo ==")
             res = dict()
             files = list()
             while True:

@@ -3,7 +3,7 @@
 #define _GNU_SOURCE
 #define __HERE__ __LINE__, __FILE__
 #define HOST "127.0.0.1" /* local host */
-#define PORT 65203
+#define PORT 65201
 
 typedef struct
 {
@@ -29,9 +29,9 @@ long sum_file(char *f_name)
     int i = 0;
     if (f == NULL)
     {
-        termina("Errore apertura file\n");
+        termina("Errore apertura file");
     }
-    while (fread(&x, sizeof(long), 1, f))
+    while (fread(&x, sizeof(long), 1, f) != 0)
     {
         res += (i++ * x);
     }
@@ -55,7 +55,7 @@ void send_to_collector(char *s)
 
     if ((fd_skt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        termina("Errore creazione socket\n");
+        termina("Errore creazione socket");
     }
 
     serv.sin_family = AF_INET;
@@ -64,14 +64,14 @@ void send_to_collector(char *s)
 
     if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
     {
-        termina("Errore apertura connessione\n");
+        termina("Errore apertura connessione");
     }
 
     int dim_host_to_network = htonl(res_len);
     e = writen(fd_skt, &dim_host_to_network, sizeof(int));
     if (e != sizeof(int))
     {
-        termina("Errore invio dati al server\n");
+        termina("Errore invio dati al server");
     }
     for (int i = 0; i < res_len; i++)
     {
@@ -79,35 +79,41 @@ void send_to_collector(char *s)
         e = writen(fd_skt, &c, sizeof(int));
         if (e != sizeof(int))
         {
-            termina("Errore write\n");
+            termina("Errore write");
         }
     }
     if (close(fd_skt) < 0)
     {
-        termina("Errore chiusura socket\n");
+        termina("Errore chiusura socket");
     }
 }
 
 void *worker_body(void *arg)
 {
     t_args *args = (t_args *)arg;
-    char file_name[255];
+    char file_name[1024];
     do
     {
         xsem_wait(args->sem_data_items, __HERE__);
         xpthread_mutex_lock(args->mutex, __HERE__);
+
         int i = *(args->cindex);
         int size_buffer = *(args->buf_len);
         strcpy(file_name, args->buffer[i % size_buffer]);
         *(args->cindex) += 1;
+
         xpthread_mutex_unlock(args->mutex, __HERE__);
         xsem_post(args->sem_free_slots, __HERE__);
+
         if (!strcmp(file_name, "_"))
             break;
+
         long sum = sum_file(file_name);
-        char res[276];
+        size_t res_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
+        char *res = malloc(res_len);
         sprintf(res, "%s:%ld", file_name, sum);
         send_to_collector(res);
+        free(res);
     } while (true);
     pthread_exit(NULL);
 }
@@ -155,6 +161,7 @@ void gen_params(int argc, char **argv, int params[])
             if (isprint(optopt))
                 fprintf(stderr, "Opzione sconosciuta '-%c'.\n", optopt);
             exit(1);
+            break;
         default:
             abort();
         }

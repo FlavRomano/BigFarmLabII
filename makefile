@@ -9,8 +9,6 @@ OUTDIR=./bin
 OBJDIR=./build
 INCDIR=./include
 
-objects=apilab.o farm.o client.o
-
 apilab.o: $(SRCDIR)/apilab.c $(INCDIR)/apilab.h
 		$(CC) $(CFLAGS) -c -o $(OBJDIR)/apilab.o $(SRCDIR)/apilab.c
 

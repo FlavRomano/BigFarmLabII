@@ -1,10 +1,11 @@
 #include "/home/local/ADUNIPI/f.romano39/BigFarmLabII/include/apilab.h"
+#include <stdbool.h>
 
 #define _GNU_SOURCE
 #define HOST "127.0.0.1" /* local host */
-#define PORT 65203
+#define PORT 65201
 
-void comunicazione(long l, int event)
+void comunicazione(long l, bool richiesta_singola)
 {
     int fd_skt;
     struct sockaddr_in serv;
@@ -13,7 +14,7 @@ void comunicazione(long l, int event)
 
     if ((fd_skt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        termina("Errore creazione socket\n");
+        termina("Errore creazione socket");
     }
 
     serv.sin_family = AF_INET;
@@ -22,79 +23,82 @@ void comunicazione(long l, int event)
 
     if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
     {
-        termina("Errore apertura connessione\n");
+        termina("Errore apertura connessione");
     }
-    int tmp;
-    if (event)
-    {
-        char s[1024];
-        int s_len = sprintf(s, "%ld", l);
-        tmp = htonl(s_len);
 
-        e = writen(fd_skt, &tmp, sizeof(int));
+    int request;
+    if (richiesta_singola)
+    {
+        size_t send_long_len = snprintf(NULL, 0, "%ld", l);
+        char send_long[send_long_len];
+        sprintf(send_long, "%ld", l);
+        request = htonl(send_long_len);
+
+        e = writen(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
         {
-            termina("Errore write\n");
+            termina("Errore write");
         }
-        for (int i = 0; i < s_len; i++)
+        for (int i = 0; i < send_long_len; i++)
         {
-            int c = htonl(s[i]);
+            int c = htonl(send_long[i]);
             e = writen(fd_skt, &c, sizeof(int));
             if (e != sizeof(int))
             {
-                termina("Errore write\n");
+                termina("Errore write");
             }
         }
 
-        e = readn(fd_skt, &tmp, sizeof(int));
+        e = readn(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
         {
-            termina("Errore read\n");
+            termina("Errore read");
         }
-        int n = ntohl(tmp);
+        int n = ntohl(request);
+        char *buffer = malloc(n);
         int i;
         for (i = 0; i < n; i++)
         {
-            e = readn(fd_skt, &tmp, sizeof(int));
+            e = readn(fd_skt, &request, sizeof(int));
             if (e != sizeof(int))
             {
-                termina("Errore read\n");
+                termina("Errore read");
             }
-            char c = ntohl(tmp);
-            s[i] = c;
+            char c = ntohl(request);
+            buffer[i] = c;
         }
-        s[i] = '\0';
-        printf("%s\n", s);
+        buffer[i] = '\0';
+        printf("%s\n", buffer);
+        free(buffer);
     }
     else /* stampa di tutte le coppie "somma:file" */
     {
-        int dim = -1;
-        tmp = htonl(dim);
+        request = htonl(-1);
 
-        e = writen(fd_skt, &tmp, sizeof(int));
+        e = writen(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
         {
-            termina("Errore write\n");
+            termina("Errore write");
         }
 
-        e = readn(fd_skt, &tmp, sizeof(int));
+        e = readn(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
         {
-            termina("Errore read\n");
+            termina("Errore read");
         }
 
-        int n = ntohl(tmp);
+        int n = ntohl(request);
         char *s;
         s = malloc(n + 1);
         int i;
         for (i = 0; i < n; i++)
         {
-            e = readn(fd_skt, &tmp, sizeof(int));
+            e = readn(fd_skt, &request, sizeof(int));
             if (e != sizeof(int))
             {
                 termina("Errore read");
             }
-            char c = ntohl(tmp);
+            char c = ntohl(request);
             s[i] = c;
         }
         s[i] = '\0';
@@ -103,7 +107,7 @@ void comunicazione(long l, int event)
     }
     if (close(fd_skt) < 0)
     {
-        termina("Errore chiusura socket\n");
+        termina("Errore chiusura socket");
     }
 }
 
@@ -113,10 +117,10 @@ int main(int argc, char const *argv[])
     {
         for (int i = 1; i < argc; i++)
         {
-            comunicazione(atol(argv[i]), 1);
+            comunicazione(atol(argv[i]), true);
         }
     }
     else /* richiesta speciale al collector */
-        comunicazione(0, 0);
+        comunicazione(0, false);
     return 0;
 }
