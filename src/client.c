@@ -7,7 +7,7 @@
 
 void ricezione(int fd_skt, int s_request)
 {
-    int e = readn(fd_skt, &s_request, sizeof(int));
+    size_t e = readn(fd_skt, &s_request, sizeof(int));
     if (e != sizeof(int))
     {
         termina("Errore read");
@@ -89,7 +89,7 @@ int main(int argc, char const *argv[])
 {
     if (argc == 1)
     {
-        comunicazione(0, true);
+        comunicazione((long)NULL, true);
     }
     else
     {

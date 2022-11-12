@@ -40,41 +40,35 @@ long sum_file(char *f_name)
     return res;
 }
 
-void send_to_collector(char *s)
+void send_to_collector(char *mess, size_t mess_len)
 {
-    int fd_skt, res_len;
+    int fd_skt = 0;
     struct sockaddr_in serv;
     size_t e;
-
-    fd_skt = 0;
-    res_len = strlen(s);
-    int package[strlen(s)];
-    for (int i = 0; i < res_len; i++)
-    {
-        package[i] = (int)s[i];
-    }
-
     if ((fd_skt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         termina("Errore creazione socket");
     }
-
     serv.sin_family = AF_INET;
     serv.sin_port = htons(PORT);
     serv.sin_addr.s_addr = inet_addr(HOST);
-
     if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
     {
         termina("Errore apertura connessione");
     }
+    int package[mess_len];
+    for (int i = 0; i < mess_len; i++)
+    {
+        package[i] = (int)mess[i];
+    }
 
-    int dim_host_to_network = htonl(res_len);
+    int dim_host_to_network = htonl(mess_len);
     e = writen(fd_skt, &dim_host_to_network, sizeof(int));
     if (e != sizeof(int))
     {
         termina("Errore invio dati al server");
     }
-    for (int i = 0; i < res_len; i++)
+    for (int i = 0; i < mess_len; i++)
     {
         int c = htonl(package[i]);
         e = writen(fd_skt, &c, sizeof(int));
@@ -101,9 +95,7 @@ void *worker_body(void *arg)
 
         int i = *(args->cindex);
         int size_buffer = *(args->buf_len);
-        size_t file_path_len = snprintf(NULL, 0, "%s", args->buffer[i % size_buffer]);
-        char *file_path = malloc(file_path_len + 1);
-        strcpy(file_path, args->buffer[i % size_buffer]);
+        char *file_path = strdup(args->buffer[i % size_buffer]);
         *(args->cindex) += 1;
 
         xpthread_mutex_unlock(args->mutex, __HERE__);
@@ -120,7 +112,7 @@ void *worker_body(void *arg)
         size_t res_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
         char *res = malloc(res_len + 1);
         sprintf(res, "%s:%ld", file_name, sum);
-        send_to_collector(res);
+        send_to_collector(res, res_len);
         free(res);
         free(file_path);
     } while (true);
@@ -168,8 +160,10 @@ void gen_params(int argc, char **argv, int params[])
             break;
         case '?':
             if (isprint(optopt))
+            {
                 fprintf(stderr, "Opzione sconosciuta '-%c'.\n", optopt);
-            exit(1);
+                exit(1);
+            }
             break;
         default:
             abort();
