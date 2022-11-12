@@ -1,4 +1,5 @@
-#define _GNU_SOURCE  // permette di usare estensioni GNU
+#define _GNU_SOURCE // permette di usare estensioni GNU
+#define __HERE__ __LINE__, __FILE__
 #include <stdio.h>   // permette di usare scanf printf etc ...
 #include <stdlib.h>  // conversioni stringa exit() etc ...
 #include <stdbool.h> // gestisce tipo bool

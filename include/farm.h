@@ -1,8 +1,6 @@
 #include "apilab.h"
 #include <libgen.h>
 
-#define _GNU_SOURCE
-#define __HERE__ __LINE__, __FILE__
 #define HOST "127.0.0.1" /* local host */
 #define PORT 65201
 
