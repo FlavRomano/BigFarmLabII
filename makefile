@@ -24,7 +24,7 @@ farm: farm.o apilab.o
 client:	client.o apilab.o
 	$(CC) $(OBJDIR)/apilab.o $(OBJDIR)/client.o $(LDLIBS) -o $(BINDIR)/client
 
-.PHONY: clean all
+.PHONY: all clean
 all: $(TARGET)
 
 clean:
