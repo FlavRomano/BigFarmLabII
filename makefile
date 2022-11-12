@@ -1,21 +1,21 @@
 SRCDIR=./src
 BINDIR=./bin
 OBJDIR=./build
-HEADERDIR=./include
+INCDIR=./include
 
 CC=gcc
-CFLAGS=-I$(HEADERDIR) -pthread -g -Wall
+CFLAGS=-I$(INCDIR) -pthread -g -Wall
 LDLIBS=-lm -lrt -pthread # Library flags or linker stuffs
 
 TARGET=farm client
 
-apilab.o: $(SRCDIR)/apilab.c $(HEADERDIR)/apilab.h
+apilab.o: $(SRCDIR)/apilab.c $(INCDIR)/apilab.h
 	$(CC) $(CFLAGS) -c -o $(OBJDIR)/apilab.o $(SRCDIR)/apilab.c
 
-farm.o: $(SRCDIR)/farm.c $(HEADERDIR)/apilab.h
+farm.o: $(SRCDIR)/farm.c $(INCDIR)/farm.h $(INCDIR)/apilab.h 
 	$(CC) $(CFLAGS) -c -o $(OBJDIR)/farm.o $(SRCDIR)/farm.c
 
-client.o: $(SRCDIR)/client.c $(HEADERDIR)/apilab.h
+client.o: $(SRCDIR)/client.c $(INCDIR)/client.h $(INCDIR)/apilab.h
 	$(CC) $(CFLAGS) -c -o $(OBJDIR)/client.o $(SRCDIR)/client.c
 
 farm: farm.o apilab.o

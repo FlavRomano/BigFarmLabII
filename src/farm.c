@@ -1,20 +1,4 @@
-#include "apilab.h"
-#include <libgen.h>
-
-#define _GNU_SOURCE
-#define __HERE__ __LINE__, __FILE__
-#define HOST "127.0.0.1" /* local host */
-#define PORT 65201
-
-typedef struct
-{
-    int *cindex;
-    char **buffer;
-    int *buf_len;
-    pthread_mutex_t *mutex;
-    sem_t *sem_free_slots;
-    sem_t *sem_data_items;
-} t_args;
+#include "farm.h"
 
 volatile sig_atomic_t sign = 0;
 
@@ -253,6 +237,5 @@ int main(int argc, char **argv)
     sem_destroy(&sem_data_items);
     sem_destroy(&sem_free_slots);
     xpthread_mutex_destroy(&cmutex, __HERE__);
-
     return 0;
 }
