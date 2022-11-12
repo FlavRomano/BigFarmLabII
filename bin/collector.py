@@ -9,7 +9,6 @@ from threading import Lock
 HOST = "127.0.0.1"
 PORT = 65201
 
-
 class ClientThread(threading.Thread):
     def __init__(self,conn,addr,res, files):
         threading.Thread.__init__(self)
