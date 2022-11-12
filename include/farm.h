@@ -1,8 +1,7 @@
-#include "apilab.h"
-#include <libgen.h>
-
 #define HOST "127.0.0.1" /* local host */
 #define PORT 65201
+#include "apilab.h"
+#include <libgen.h>
 
 typedef struct
 {
