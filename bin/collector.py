@@ -36,38 +36,41 @@ def main(host=HOST, port=PORT):
         except KeyboardInterrupt:
             pass
         s.shutdown(socket.SHUT_RDWR)
-            
+        
             
 def gestisci_connessione(conn, dic, files, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
-        
         if dim > -1:
             s = "".join([chr(struct.unpack("!i", recv_all(conn,4)[:4])[0]) for i in range(dim)])
             if ":" in s:
-                arr = s.split(":")
-                name = arr[0]
-                l = arr[1]
-                mutex.acquire()
-                if l not in dic:
-                    files.append(arr[0])
-                    dic[arr[1]] = arr[0]
-                if l in dic and name not in files:
-                    files.append(arr[0])
-                    dic[arr[1]] += f", {arr[0]}" 
-                mutex.release()
+                ricezione_farm(s, dic, files, mutex)
             else:
                 cerca_somma(s, conn, dic, mutex, 1)
         else:
             print_coppie(conn, dic, mutex)
     
 
+def ricezione_farm(s, dic, files, mutex):
+    arr = s.split(":")
+    name = arr[0]
+    l = arr[1]
+    mutex.acquire()
+    if l not in dic:
+        files.append(arr[0])
+        dic[arr[1]] = arr[0]
+    if l in dic and name not in files:
+        files.append(arr[0])
+        dic[arr[1]] += f", {arr[0]}" 
+    mutex.release()
+
+
 def cerca_somma(s, conn, dic, mutex, flag):
     mutex.acquire()
-    f = 0
+    stop = 0
     if len(dic) == 0 or flag == 0:
-        f = 1
+        stop = 1
         mess = f"{'Nessun file' : >12}\n"
         conn.sendall(struct.pack("!i", len(mess)))
         for c in mess:
@@ -77,13 +80,13 @@ def cerca_somma(s, conn, dic, mutex, flag):
             if k == s:
                 res = ""
                 res += (f"{k : >12} {dic.get(k)}\n")
-                f = 1
+                stop = 1
                 conn.sendall(struct.pack("!i", len(res)))
                 for c in res:
                     conn.sendall(struct.pack("!i", ord(c)))
     mutex.release()
-    if f == 0:
-        cerca_somma(s, conn, dic, mutex, f)
+    if stop == 0:
+        cerca_somma(s, conn, dic, mutex, 0)
 
 
 def print_coppie(conn, dic, mutex):
