@@ -5,7 +5,7 @@ void ricezione(int fd_skt)
     int net_slen;
     size_t e = readn(fd_skt, &net_slen, sizeof(int));
     if (e != sizeof(int))
-        termina("Errore read");
+        termina("Errore lettura dimensione stringa");
 
     int len = ntohl(net_slen);
     char *server_response = malloc(len + 1);
@@ -15,13 +15,15 @@ void ricezione(int fd_skt)
     {
         e = readn(fd_skt, &net_char, sizeof(int));
         if (e != sizeof(int))
-            termina("Errore read");
+            termina("Errore lettura del carattere");
 
         char c = ntohl(net_char);
         server_response[i] = c;
     }
     server_response[i] = '\0';
-    if (close(fd_skt) < 0)
+
+    e = close(fd_skt);
+    if (e < 0)
         termina("Errore chiusura socket");
 
     printf("%s", server_response);
@@ -48,7 +50,7 @@ void comunicazione(long l, bool request_all_pairs)
         request = htonl(-1);
         e = writen(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
-            termina("Errore write");
+            termina("Errore invio richiesta di tutte le coppie");
     }
     else
     {
@@ -58,14 +60,14 @@ void comunicazione(long l, bool request_all_pairs)
         request = htonl(client_long_len);
         e = writen(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
-            termina("Errore write");
+            termina("Errore invio richiesta di una coppia");
 
         for (int i = 0; i < client_long_len; i++)
         {
             int c = htonl(client_long[i]);
             e = writen(fd_skt, &c, sizeof(int));
             if (e != sizeof(int))
-                termina("Errore write");
+                termina("Errore invio cifra del long");
         }
         free(client_long);
     }
