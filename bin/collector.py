@@ -7,14 +7,45 @@ from threading import Lock
 
 HOST = "127.0.0.1"
 PORT = 65201
+
+
+class ClientThread(threading.Thread):
+    def __init__(self, conn, addr, res, files):
+        threading.Thread.__init__(self)
+        self.conn = conn
+        self.addr = addr
+        self.res = res
+        self.files = files
         
+    def run(self):
+        mutex = Lock()
+        gestisci_connessione(self.conn, self.res, self.files, mutex)
+
+
+def main(host=HOST, port=PORT):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # for avoiding [Errno 98] Address already in use 
+            s.bind((host, port))
+            s.listen()
+            print("\t\t== Server attivo ==")
+            res = dict()
+            files = list()
+            while True:
+                conn, addr = s.accept()
+                t = ClientThread(conn, addr, res, files)
+                t.start()
+        except KeyboardInterrupt:
+            pass
+        s.shutdown(socket.SHUT_RDWR)
+
             
 def gestisci_connessione(conn, dic, files, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
         if dim > -1:
-            s = "".join([chr(struct.unpack("!i", recv_all(conn, 4)[:4])[0]) for i in range(dim)])
+            s = "".join([chr(struct.unpack("!i", recv_all(conn, 4)[:4])[0]) for _ in range(dim)])
             if ":" in s:
                 ricezione_farm(s, dic, files, mutex)
             else:
@@ -82,36 +113,6 @@ def recv_all(conn, n):
     chunks += chunk
     bytes_recd = bytes_recd + len(chunk)
   return chunks
-
-
-class ClientThread(threading.Thread):
-    def __init__(self, conn, addr, res, files):
-        threading.Thread.__init__(self)
-        self.conn = conn
-        self.addr = addr
-        self.res = res
-        self.files = files
-    def run(self):
-        mutex = Lock()
-        gestisci_connessione(self.conn, self.res, self.files, mutex)
-
-
-def main(host=HOST, port=PORT):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # for avoiding [Errno 98] Address already in use 
-            s.bind((host, port))
-            s.listen()
-            print("\t\t== Server attivo ==")
-            res = dict()
-            files = list()
-            while True:
-                conn, addr = s.accept()
-                t = ClientThread(conn, addr, res, files)
-                t.start()
-        except KeyboardInterrupt:
-            pass
-        s.shutdown(socket.SHUT_RDWR)
 
 
 if __name__ == "__main__":
