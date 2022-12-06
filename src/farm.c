@@ -36,10 +36,13 @@ void send_to_collector(char *mess, size_t mess_len)
     serv.sin_family = AF_INET;
     serv.sin_port = htons(PORT);
     serv.sin_addr.s_addr = inet_addr(HOST);
-    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
+
+    e = connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv));
+    if (e < 0)
     {
         termina("Errore apertura connessione");
     }
+
     int package[mess_len];
     for (int i = 0; i < mess_len; i++)
     {
@@ -50,18 +53,21 @@ void send_to_collector(char *mess, size_t mess_len)
     e = writen(fd_skt, &dim_host_to_network, sizeof(int));
     if (e != sizeof(int))
     {
-        termina("Errore invio dati al server");
+        termina("Errore invio lunghezza messaggio al server");
     }
+
     for (int i = 0; i < mess_len; i++)
     {
         int c = htonl(package[i]);
         e = writen(fd_skt, &c, sizeof(int));
         if (e != sizeof(int))
         {
-            termina("Errore write");
+            termina("Errore invio carattere");
         }
     }
-    if (close(fd_skt) < 0)
+
+    e = close(fd_skt);
+    if (e < 0)
     {
         termina("Errore chiusura socket");
     }
@@ -85,7 +91,7 @@ void *worker_body(void *arg)
         xpthread_mutex_unlock(args->mutex, __HERE__);
         xsem_post(args->sem_free_slots, __HERE__);
 
-        if (!strcmp(file_path, "_"))
+        if (strcmp(file_path, "_") == 0)
         {
             free(file_path);
             break;
