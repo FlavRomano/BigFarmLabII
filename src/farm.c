@@ -164,7 +164,7 @@ void gen_params(int argc, char **argv, int params[])
     params[2] = delay;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     int params[3]; /* 0. nthread ; 1. qlen ; 2. delay */
     if (argc < 2)
