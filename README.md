@@ -48,25 +48,25 @@ Invio `n` byte tramite socket al collector per comunicargli la lunghezza della s
 Visto che un'operazione di scrittura può restituire meno di quanto specificato (es. causa buffer pieno del kernel), capiamo bene che non per forza ciò debba essere causato da un errore e quindi si dovrebbe continuare a scrivere il resto dei dati (ma con una `write` ciò non accade). Per questo motivo utilizziamo la funzione `writen`, definita *ad hoc* per invocare `write` un numero di volte necessario a scrivere tutti gli `N` byte di dati.
 ### Terminazione thread
 Invio il carattere `"_"` dal master ai worker per far capire che devono fermarsi. Successivamente chiamo una `pthread_join` per tutti i thread così da:
-	1. Aspettare che i thread finiscano.
-	2. Liberare le risorse associate al thread.
+	
+1. Aspettare che i thread finiscano.
+2. Liberare le risorse associate al thread.
 
 # Client (.c)
 Il client comunica con il collector. Può prendere in input da linea di comando dei long oppure nulla:
 - Per ogni long passato da linea di comando restituisce il risultato comunica al collector la dimensione del long convertita in *network byte order* (grazie a `htonl`). Con una `readn` legge la dimensione in byte della stringa che il collector vuole restituirgli che viene convertita in *network byte order* (grazie a `ntohl`) così da poter leggere carattere per carattere tutta la stringa poi inviata dal collector.
 - Se non passo nulla allora riceve tutti i risultati ottenuti dalla farm, legge la dimensione della stringa che vuole inviare il collector e, carattere per carattere, viene scritta dal client per poi essere restituita all'utente.
 # Collector (.py)
-È il server in ascolto sulla porta 65201 della macchina.  Nel `main` usando `with [...] as` alla fine del blocco il socket viene chiusto automaticamente. Dentro il while, con `accept` il server si blocca fino a quando arriva un client; all'arrivo di un client vengono inizializzate le variabili `conn` e `addr`:
+È il server in ascolto sulla porta 65201 della macchina.  Nel `main` usando `with [...] as` alla fine del blocco il socket viene chiuso automaticamente. Dentro il while, con `accept` il server si blocca fino a quando arriva un client; all'arrivo di un client vengono inizializzate le variabili `conn` e `addr`:
 - `conn` è un oggetto connessione usato per gestire la connessione.
 - `addr` è l'indirizzo del client.
-Se riceve un'interruzione `SIGINT` (chiamata `KeyboardInterrupt` in python) allora il server restitutisce i dati ricevuti e chiude il socket.
+Se riceve un'interruzione `SIGINT` (chiamata `KeyboardInterrupt` in python) allora il server chiude il socket e si spegne.
 
-La classe `ClientThread` estende la classe `Thread`, in particolare aggiungo `res` che contiene il dizionario le cui chiavi sono i risultati long e i valori i nomi del file da cui sono stati calcolati inviati dal processo `farm`.  Ho assunto che il nome di un file possa comparire solo una volta all'interno del valore di una data chiave (se la `farm` invia due volte gli stessi risultati, il contenuto di `res` rimarrà invariato dopo il primo inoltro). La classe contiene un metodo `run` che viene invocato non appena viene chiamato il metodo `start()` del thread.
+La classe `ClientThread` estende la classe `Thread`, in particolare aggiungo `res` che contiene il dizionario con associazioni `(long: file_name)` inviati dal processo `farm`.  Ho assunto che il nome di un file possa comparire solo una volta all'interno del valore di una data chiave (se la `farm` invia due volte gli stessi risultati, il contenuto di `res` rimarrà invariato dopo il primo inoltro). La classe contiene un metodo `run` che viene invocato non appena viene chiamato il metodo `start()` del thread.
 
 Dentro il metodo `run()` inizializzo un semaforo `mutex` (usato per garantire mutua esclusione dentro la sezione critica dove si accede al dizionario di risultati) e chiamo `gestisci_connessione()`. 
 
-Questa funzione permette lo scambio di dati tra client e server, dal client riceve inizialmente la dimensione del `long`. 
-- Se `len(long) == -1` allora vuol dire che devo inviare al client tutto il dizionario dei risultati richiestomi.
-- Altrimenti vuol dire che: 
-	- Deve ricevere `file_name:long`  dalla farm.
-	- Inviare al client il `file_name:long` richiesto con l'invio del `file_name` dal client.
+Questa funzione permette lo scambio di dati tra client e server, dal client può ricevere due tipi di richieste. 
+- Se il server riceve $-1$ allora il client sta richiedendo tutte le coppie `filename:long`.
+- Altrimenti il server riceve la lunghezza del long, che servirà per ricevere, cifra dopo cifra, l'intero long; dopodiché invierà al client le varie coppie
+che corrispondono a quel long.
