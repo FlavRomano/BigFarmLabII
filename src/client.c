@@ -74,7 +74,7 @@ void comunicazione(long l, bool request_all_pairs)
     ricezione(fd_skt);
 }
 
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 {
     if (argc == 1)
         comunicazione((long)NULL, true);
