@@ -45,11 +45,11 @@ def gestisci_connessione(conn, dic, files, mutex):
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
         if dim > -1:
-            s = "".join([chr(struct.unpack("!i", recv_all(conn, 4)[:4])[0]) for _ in range(dim)])
-            if ":" in s:
-                ricezione_farm(s, dic, files, mutex)
+            farm_mess = ("").join([chr(struct.unpack("!i", recv_all(conn, 4)[:4])[0]) for _ in range(dim)])
+            if ":" in farm_mess:
+                ricezione_farm(farm_mess, dic, files, mutex)
             else:
-                cerca_somma(s, conn, dic, mutex)
+                cerca_somma(farm_mess, conn, dic, mutex)
         else:
             print_coppie(conn, dic, mutex)
     
