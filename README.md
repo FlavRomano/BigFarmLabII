@@ -1,6 +1,6 @@
 # MasterWorker (farm.c)
 ```c
-void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay)
+void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
 ```
 
 Il programma prende da linea di comando:
