@@ -17,4 +17,4 @@ void handler();
 long sum_file(char *f_name);
 void send_to_collector(char *mess, size_t mess_len);
 void *worker_body(void *arg);
-void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay);
+void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay);
