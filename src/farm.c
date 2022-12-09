@@ -96,7 +96,7 @@ void *worker_body(void *arg)
     pthread_exit(NULL);
 }
 
-void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay)
+void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
 {
     // valori di default
     *nthread = 4;
