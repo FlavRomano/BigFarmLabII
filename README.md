@@ -1,5 +1,5 @@
 # MasterWorker (farm.c)
-`void gen_params(int argc, char **argv, int params[])`
+`void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay)`
 
 Il programma prende da linea di comando:
 - Argomenti opzionali:
@@ -8,17 +8,17 @@ Il programma prende da linea di comando:
 	- t = specifica il delay che intercorre tra due richieste successive al thread master.
 - Nomi file.
 
-Questa funzione usa `getopt` per riempire l'array `params[]` con i parametri e nomi file presi da linea di comando.
+Questa funzione usa `getopt` per aggiornare i riferimenti ai parametri della farm secondo quanto immesso da terminale.
 	
-`int main(int argc, char **argv)`
+`int main(int argc, char *argv[])`
 
-Dopo aver generato l'array con i parametri `params[]`, leggo i file da linea di comando e li copio su un array allocato (sfrutto il valore `optind` che genera `getopt` in modo da sapere quanti file sono stati passati dalla linea di comando, e quindi quanto grande fare l'array).
+Dopo aver aggiornato i parametri, vengono letti i nomi dei file da linea di comando e copiati su un array.
 ## Segnali
 La funzione `sigaction` è chiamata per specificare cosa fare quando arriva il segnale `SIGINT`, visto che non devo mascherare particolari segnali o fare gestioni complicate di essi, posso limitarmi ad abbinargli un handler che ho definito in modo tale da far terminare anticipatamente il processo però prima completando i task nel buffer. In particolare ho dichiarato una variabile globale `volatile sig_atomic_t sign = 0` che funge da flag all'interno del *for* dove il thread master invia i nomi dei file, quando viene inviato un `SIGINT` la guardia del *for* viene violata e si passa alla terminazione dei thread.
 ## Semafori
 Utilizzo 3 semafori:
 1. `sem_data_items` il cui valore viene inizializzato a 0, conterà il numero di elementi inseriti nel buffer.
-2. `sem_free_slots` il cui valore viene inizializzato a `q_len`, conterà il numero di slot liberi all'interno del buffer.
+2. `sem_free_slots` il cui valore viene inizializzato a `q_len`, conterrà il numero di slot liberi all'interno del buffer.
 3. `mutex` semaforo mutex (è un semaforo normale inizializzato a 0) viene utilizzato per serializzare l'accesso all'interno della sezione critica della funzione invocata dai thread worker.
 ## Struct
 Ovviamente devo passare una struct (`t_args`) al thread worker che contenga tutto ciò che gli serve per operare, in particolare:
