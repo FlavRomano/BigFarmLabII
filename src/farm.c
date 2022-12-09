@@ -96,44 +96,44 @@ void *worker_body(void *arg)
     pthread_exit(NULL);
 }
 
-void gen_params(int argc, char **argv, int params[])
+void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay)
 {
-    int nthread = 4;
-    int qlen = 8;
-    int delay = 0;
-    int c;
-    int x;
+    // valori di default
+    *nthread = 4;
+    *qlen = 8;
+    *delay = 0;
+    int command, argument;
 
-    while ((c = getopt(argc, argv, ":n:q:t:")) != -1)
+    while ((command = getopt(argc, argv, ":n:q:t:")) != -1)
     {
-        switch (c)
+        switch (command)
         {
         case 'n':
-            x = atoi(optarg);
-            if (x <= 1)
+            argument = atoi(optarg);
+            if (argument <= 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", x);
+                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", argument);
                 exit(1);
             }
-            nthread = atoi(optarg);
+            *nthread = argument;
             break;
         case 'q':
-            x = atoi(optarg);
-            if (x < 1)
+            argument = atoi(optarg);
+            if (argument < 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", x);
+                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", argument);
                 exit(1);
             }
-            qlen = atoi(optarg);
+            *qlen = argument;
             break;
         case 't':
-            x = atoi(optarg);
-            if (x <= 0)
+            argument = atoi(optarg);
+            if (argument <= 0)
             {
-                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", x);
+                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", argument);
                 exit(1);
             }
-            delay = atoi(optarg);
+            *delay = argument;
             break;
         case '?':
             if (isprint(optopt))
@@ -146,28 +146,24 @@ void gen_params(int argc, char **argv, int params[])
             abort();
         }
     }
-    params[0] = nthread;
-    params[1] = qlen;
-    params[2] = delay;
 }
 
 int main(int argc, char *argv[])
 {
-    int params[3]; /* 0. nthread ; 1. qlen ; 2. delay */
     if (argc < 2)
     {
         printf("Uso: %s {-n | -q | -d} file [file ...]\n", argv[0]);
         return 1;
     }
-    gen_params(argc, argv, params);
-    int j = 0;
+    int nthreads, qlen, delay;
+    gen_params(argc, argv, &nthreads, &qlen, &delay);
     int num_of_files = argc - optind;
     char **files = malloc(sizeof(char *) * num_of_files);
-    for (int i = optind; i < argc; i++)
-    {
-        files[j] = argv[i];
-        j++;
-    }
+
+    // optind contiene l'indice del prossimo argomento che deve essere gestito dalla funzione getopt(),
+    // quindi dove iniziano (in argv) i nomi dei file da dare alla farm.
+    for (int i = 0; i < argc; i++)
+        files[i] = argv[optind++];
 
     struct sigaction sa;
     sa.sa_handler = handler;
@@ -176,11 +172,11 @@ int main(int argc, char *argv[])
 
     pthread_mutex_t cmutex = PTHREAD_MUTEX_INITIALIZER;
     sem_t sem_free_slots, sem_data_items;
-    xsem_init(&sem_free_slots, 0, params[1], __HERE__);
+    xsem_init(&sem_free_slots, 0, qlen, __HERE__);
     xsem_init(&sem_data_items, 0, 0, __HERE__);
-    char *buffer[params[1]];
+    char *buffer[qlen];
 
-    for (int i = 0; i < params[1]; i++)
+    for (int i = 0; i < qlen; i++)
         buffer[i] = malloc(4097);
 
     int pindex = 0, cindex = 0;
@@ -188,38 +184,38 @@ int main(int argc, char *argv[])
     t_args *args = malloc(sizeof(t_args));
     args->cindex = &cindex;
     args->buffer = buffer;
-    args->buf_len = &params[1];
+    args->buf_len = &qlen;
     args->mutex = &cmutex;
     args->sem_data_items = &sem_data_items;
     args->sem_free_slots = &sem_free_slots;
 
     /* thread worker */
-    pthread_t th[params[0]];
-    for (int i = 0; i < params[0]; i++)
+    pthread_t th[nthreads];
+    for (int i = 0; i < nthreads; i++)
         xpthread_create(&th[i], NULL, worker_body, args, __HERE__);
 
     /* master thread */
     for (int i = 0; sign == 0 && i < num_of_files; i++)
     {
-        usleep(params[2] * 1000);
+        usleep(delay * 1000);
         xsem_wait(&sem_free_slots, __HERE__);
-        strcpy(buffer[pindex++ % params[1]], files[i]);
+        strcpy(buffer[pindex++ % qlen], files[i]);
         xsem_post(&sem_data_items, __HERE__);
     }
 
     /* terminazione threads con un dummy char */
-    for (int i = 0; i < params[0]; i++)
+    for (int i = 0; i < nthreads; i++)
     {
         xsem_wait(&sem_free_slots, __HERE__);
-        strcpy(buffer[pindex++ % params[1]], "_");
+        strcpy(buffer[pindex++ % qlen], "_");
         xsem_post(&sem_data_items, __HERE__);
     }
 
-    for (int i = 0; i < params[0]; i++)
+    for (int i = 0; i < nthreads; i++)
         xpthread_join(th[i], NULL, __HERE__);
 
     free(args);
-    for (int i = 0; i < params[1]; i++)
+    for (int i = 0; i < qlen; i++)
         free(buffer[i]);
 
     free(files);
