@@ -1,5 +1,7 @@
 # MasterWorker (farm.c)
-`void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay)`
+```c
+void gen_params(int argc, char **argv, int *nthread, int *qlen, int *delay)
+```
 
 Il programma prende da linea di comando:
 - Argomenti opzionali:
@@ -10,7 +12,9 @@ Il programma prende da linea di comando:
 
 Questa funzione usa `getopt` per aggiornare i riferimenti ai parametri della farm secondo quanto immesso da terminale.
 	
-`int main(int argc, char *argv[])`
+```c
+int main(int argc, char *argv[])
+```
 
 Dopo aver aggiornato i parametri, vengono letti i nomi dei file da linea di comando e copiati su un array.
 ## Segnali
