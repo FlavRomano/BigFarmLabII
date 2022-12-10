@@ -11,10 +11,10 @@ void comunicazione(long l, bool request_all_pairs)
     serv.sin_family = AF_INET;
     serv.sin_port = htons(PORT);
     serv.sin_addr.s_addr = inet_addr(HOST);
-    size_t e = connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv));
-    if (e < 0)
+    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
         termina("Errore apertura connessione");
 
+    size_t e;
     int request;
     if (request_all_pairs)
     {
@@ -66,8 +66,7 @@ void ricezione(int fd_skt)
     }
     server_response[i] = '\0';
 
-    e = close(fd_skt);
-    if (e < 0)
+    if (close(fd_skt) < 0)
         termina("Errore chiusura socket");
 
     printf("%s", server_response);
