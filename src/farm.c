@@ -34,8 +34,7 @@ void send_to_collector(char *mess, size_t mess_len)
     serv.sin_port = htons(PORT);
     serv.sin_addr.s_addr = inet_addr(HOST);
 
-    e = connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv));
-    if (e < 0)
+    if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
         termina("Errore apertura connessione");
 
     int package[mess_len];
@@ -55,8 +54,7 @@ void send_to_collector(char *mess, size_t mess_len)
             termina("Errore invio carattere");
     }
 
-    e = close(fd_skt);
-    if (e < 0)
+    if (close(fd_skt) < 0)
         termina("Errore chiusura socket");
 }
 
@@ -158,12 +156,13 @@ int main(int argc, char *argv[])
     int nthreads, qlen, delay;
     gen_params(argc, argv, &nthreads, &qlen, &delay);
     int num_of_files = argc - optind;
+    if (num_of_files == 0)
+        termina("Nessun file inserito");
     char **files = malloc(sizeof(char *) * num_of_files);
 
-    // optind contiene l'indice del prossimo argomento che deve essere gestito dalla funzione getopt(),
-    // quindi dove iniziano (in argv) i nomi dei file da dare alla farm.
-    for (int i = 0; i < argc; i++)
-        files[i] = argv[optind++];
+    int j = 0;
+    for (int i = optind; i < argc; i++)
+        files[j++] = argv[i];
 
     struct sigaction sa;
     sa.sa_handler = handler;
@@ -174,8 +173,8 @@ int main(int argc, char *argv[])
     sem_t sem_free_slots, sem_data_items;
     xsem_init(&sem_free_slots, 0, qlen, __HERE__);
     xsem_init(&sem_data_items, 0, 0, __HERE__);
-    char *buffer[qlen];
 
+    char **buffer = malloc(sizeof(char *) * qlen);
     for (int i = 0; i < qlen; i++)
         buffer[i] = malloc(4097);
 
@@ -218,6 +217,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < qlen; i++)
         free(buffer[i]);
 
+    free(buffer);
     free(files);
     sem_destroy(&sem_data_items);
     sem_destroy(&sem_free_slots);
