@@ -100,38 +100,35 @@ void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
     *nthread = 4;
     *qlen = 8;
     *delay = 0;
-    int command, argument;
+    int command;
 
     while ((command = getopt(argc, argv, ":n:q:t:")) != -1)
     {
         switch (command)
         {
         case 'n':
-            argument = atoi(optarg);
-            if (argument <= 1)
+            *nthread = atoi(optarg);
+            if (*nthread <= 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", argument);
+                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", *nthread);
                 exit(1);
             }
-            *nthread = argument;
             break;
         case 'q':
-            argument = atoi(optarg);
-            if (argument < 1)
+            *qlen = atoi(optarg);
+            if (*qlen < 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", argument);
+                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", *qlen);
                 exit(1);
             }
-            *qlen = argument;
             break;
         case 't':
-            argument = atoi(optarg);
-            if (argument <= 0)
+            *delay = atoi(optarg);
+            if (*delay <= 0)
             {
-                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", argument);
+                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", *delay);
                 exit(1);
             }
-            *delay = argument;
             break;
         case '?':
             if (isprint(optopt))
