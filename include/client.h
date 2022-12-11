@@ -1,4 +1,4 @@
-#define HOST "127.0.0.1" /* local host */
+#define HOST "127.0.0.1"
 #define PORT 65201
 #include "apilab.h"
 #include <stdbool.h>
