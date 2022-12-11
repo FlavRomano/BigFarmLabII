@@ -49,9 +49,9 @@ def gestisci_connessione(conn, dic, files, mutex):
             if ":" in farm_mess:
                 ricezione_farm(farm_mess, dic, files, mutex)
             else:
-                cerca_somma(farm_mess, conn, dic, mutex)
+                comunica_somma(farm_mess, conn, dic, mutex)
         else:
-            print_coppie(conn, dic, mutex)
+            comunica_tutto(conn, dic, mutex)
     
 
 def ricezione_farm(s, dic, files, mutex):
@@ -68,7 +68,7 @@ def ricezione_farm(s, dic, files, mutex):
     mutex.release()
 
 
-def cerca_somma(s, conn, dic, mutex):
+def comunica_somma(s, conn, dic, mutex):
     mutex.acquire()
     if s not in dic:
         mess = f"{'Nessun file' : >12}\n"
@@ -86,7 +86,7 @@ def cerca_somma(s, conn, dic, mutex):
     mutex.release()
 
 
-def print_coppie(conn, dic, mutex):
+def comunica_tutto(conn, dic, mutex):
     mutex.acquire()
     if len(dic) == 0:
         mess = f"{'Nessun file' : >12}\n"
