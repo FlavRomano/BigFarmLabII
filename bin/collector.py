@@ -25,7 +25,7 @@ class ClientThread(threading.Thread):
 def main(host=HOST, port=PORT):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # for avoiding [Errno 98] Address already in use 
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # per evitare [Errno 98] Address already in use 
             s.bind((host, port))
             s.listen()
             print("\t\t== Server attivo ==")
@@ -44,14 +44,17 @@ def gestisci_connessione(conn, dic, files, mutex):
     with conn:
         data = recv_all(conn, 4)
         dim = struct.unpack("!i", data[:4])[0]
+        copy_dic = dic.copy() # per evitare errori a Runtime
+        # quando il client fa una richiesta al server prima che abbia concluso la totale
+        # ricezione dei dati dalla farm (e quindi l'aggiornamento del dizionario)
         if dim > -1:
             farm_mess = ("").join([chr(struct.unpack("!i", recv_all(conn, 4)[:4])[0]) for _ in range(dim)])
             if ":" in farm_mess:
                 ricezione_farm(farm_mess, dic, files, mutex)
             else:
-                comunica_somma(farm_mess, conn, dic, mutex)
+                comunica_somma(farm_mess, conn, copy_dic, mutex)
         else:
-            comunica_tutto(conn, dic, mutex)
+            comunica_tutto(conn, copy_dic, mutex)
     
 
 def ricezione_farm(s, dic, files, mutex):
@@ -62,27 +65,28 @@ def ricezione_farm(s, dic, files, mutex):
     if long not in dic:
         files.append(file_name)
         dic[long] = file_name
-    if long in dic and file_name not in files:
+    elif file_name not in files:
         files.append(file_name)
         dic[long] += f", {file_name}" 
     mutex.release()
 
 
-def comunica_somma(s, conn, dic, mutex):
+def comunica_somma(somma, conn, dic, mutex):
     mutex.acquire()
-    if s not in dic:
+    if somma not in dic:
         mess = f"{'Nessun file' : >12}\n"
         conn.sendall(struct.pack("!i", len(mess)))
-        for c in mess:
-            conn.sendall(struct.pack("!i", ord(c)))
+        for char in mess:
+            conn.sendall(struct.pack("!i", ord(char)))
     else:
-        for k in dic:
-            if k == s:
-                res = ""
-                res += (f"{k : >12} {dic.get(k)}\n")
-                conn.sendall(struct.pack("!i", len(res)))
-                for c in res:
-                    conn.sendall(struct.pack("!i", ord(c)))
+        for long in dic:
+            if long == somma:
+                mess = ""
+                file_name = dic.get(long)
+                mess += (f"{long : >12} {file_name}\n")
+                conn.sendall(struct.pack("!i", len(mess)))
+                for char in mess:
+                    conn.sendall(struct.pack("!i", ord(char)))
     mutex.release()
 
 
@@ -91,15 +95,16 @@ def comunica_tutto(conn, dic, mutex):
     if len(dic) == 0:
         mess = f"{'Nessun file' : >12}\n"
         conn.sendall(struct.pack("!i", len(mess)))
-        for c in mess:
-            conn.sendall(struct.pack("!i", ord(c)))
+        for char in mess:
+            conn.sendall(struct.pack("!i", ord(char)))
     else:
-        s = ""
-        for k in dic:
-            s += f"{k:>12} {dic.get(k)}\n"
-        conn.sendall(struct.pack("!i", len(s.encode('utf-8'))))
-        for c in s:
-            conn.sendall(struct.pack("!i", ord(c)))
+        mess = ""
+        for long in dic:
+            file_name = dic.get(long)
+            mess += f"{long : >12} {file_name}\n"
+        conn.sendall(struct.pack("!i", len(mess.encode('utf-8'))))
+        for char in mess:
+            conn.sendall(struct.pack("!i", ord(char)))
     mutex.release()
 
     
