@@ -10,11 +10,11 @@ void handler()
 long sum_file(char *f_name)
 {
     FILE *f = xfopen(f_name, "rb", __HERE__);
-    long x, res = 0;
-    int i = 0;
     if (f == NULL)
         termina("Errore apertura file");
 
+    long x, res = 0;
+    int i = 0;
     while (fread(&x, sizeof(long), 1, f) != 0)
         res += (i++ * x);
 
@@ -22,11 +22,10 @@ long sum_file(char *f_name)
     return res;
 }
 
-void send_to_collector(char *mess, size_t mess_len)
+void send_to_collector(char *file_name, long sum)
 {
     int fd_skt = 0;
     struct sockaddr_in serv;
-    size_t e;
     if ((fd_skt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         termina("Errore creazione socket");
 
@@ -37,12 +36,16 @@ void send_to_collector(char *mess, size_t mess_len)
     if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
         termina("Errore apertura connessione");
 
+    size_t mess_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
+    char *mess = malloc(mess_len + 1);
+    sprintf(mess, "%s:%ld", file_name, sum);
+
     int package[mess_len];
     for (int i = 0; i < mess_len; i++)
         package[i] = (int)mess[i];
 
     int dim_host_to_network = htonl(mess_len);
-    e = writen(fd_skt, &dim_host_to_network, sizeof(int));
+    size_t e = writen(fd_skt, &dim_host_to_network, sizeof(int));
     if (e != sizeof(int))
         termina("Errore invio lunghezza messaggio al server");
 
@@ -56,6 +59,8 @@ void send_to_collector(char *mess, size_t mess_len)
 
     if (close(fd_skt) < 0)
         termina("Errore chiusura socket");
+
+    free(mess);
 }
 
 void *worker_body(void *arg)
@@ -84,11 +89,7 @@ void *worker_body(void *arg)
 
         sum = sum_file(file_path);
         file_name = basename(file_path);
-        size_t res_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
-        char *res = malloc(res_len + 1);
-        sprintf(res, "%s:%ld", file_name, sum);
-        send_to_collector(res, res_len);
-        free(res);
+        send_to_collector(file_name, sum);
         free(file_path);
     } while (true);
     pthread_exit(NULL);
@@ -152,11 +153,11 @@ int main(int argc, char *argv[])
     }
     int nthreads, qlen, delay;
     gen_params(argc, argv, &nthreads, &qlen, &delay);
+
     int num_of_files = argc - optind;
     if (num_of_files == 0)
         termina("Nessun file inserito");
     char **files = malloc(sizeof(char *) * num_of_files);
-
     int j = 0;
     for (int i = optind; i < argc; i++)
         files[j++] = argv[i];
