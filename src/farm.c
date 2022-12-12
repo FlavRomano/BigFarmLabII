@@ -7,55 +7,6 @@ void handler()
     sign = 1;
 }
 
-void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
-{
-    // valori di default
-    *nthread = 4;
-    *qlen = 8;
-    *delay = 0;
-    int command;
-
-    while ((command = getopt(argc, argv, ":n:q:t:")) != -1)
-    {
-        switch (command)
-        {
-        case 'n':
-            *nthread = atoi(optarg);
-            if (*nthread <= 1)
-            {
-                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", *nthread);
-                exit(1);
-            }
-            break;
-        case 'q':
-            *qlen = atoi(optarg);
-            if (*qlen < 1)
-            {
-                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", *qlen);
-                exit(1);
-            }
-            break;
-        case 't':
-            *delay = atoi(optarg);
-            if (*delay <= 0)
-            {
-                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", *delay);
-                exit(1);
-            }
-            break;
-        case '?':
-            if (isprint(optopt))
-            {
-                fprintf(stderr, "Opzione sconosciuta '-%c'.\n", optopt);
-                exit(1);
-            }
-            break;
-        default:
-            abort();
-        }
-    }
-}
-
 long sum_file(char *f_name)
 {
     FILE *f = xfopen(f_name, "rb", __HERE__);
@@ -142,6 +93,55 @@ void *worker_body(void *arg)
         free(file_path);
     } while (true);
     pthread_exit(NULL);
+}
+
+void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
+{
+    // valori di default
+    *nthread = 4;
+    *qlen = 8;
+    *delay = 0;
+    int command;
+
+    while ((command = getopt(argc, argv, ":n:q:t:")) != -1)
+    {
+        switch (command)
+        {
+        case 'n':
+            *nthread = atoi(optarg);
+            if (*nthread <= 1)
+            {
+                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", *nthread);
+                exit(1);
+            }
+            break;
+        case 'q':
+            *qlen = atoi(optarg);
+            if (*qlen < 1)
+            {
+                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", *qlen);
+                exit(1);
+            }
+            break;
+        case 't':
+            *delay = atoi(optarg);
+            if (*delay <= 0)
+            {
+                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", *delay);
+                exit(1);
+            }
+            break;
+        case '?':
+            if (isprint(optopt))
+            {
+                fprintf(stderr, "Opzione sconosciuta '-%c'.\n", optopt);
+                exit(1);
+            }
+            break;
+        default:
+            abort();
+        }
+    }
 }
 
 int main(int argc, char *argv[])
