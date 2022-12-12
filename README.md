@@ -11,12 +11,7 @@ Il programma prende da linea di comando:
 - Nomi file.
 
 Questa funzione usa `getopt` per aggiornare i riferimenti ai parametri della farm secondo quanto immesso da terminale.
-	
-```c
-int main(int argc, char *argv[])
-```
 
-Dopo aver aggiornato i parametri, vengono letti i nomi dei file da linea di comando e copiati su un array.
 ## Segnali
 La funzione `sigaction` è chiamata per specificare cosa fare quando arriva il segnale `SIGINT`, visto che non devo mascherare particolari segnali o fare gestioni complicate di essi, posso limitarmi ad abbinargli un handler che ho definito in modo tale da far terminare anticipatamente il processo però prima completando i task nel buffer. In particolare ho dichiarato una variabile globale `volatile sig_atomic_t sign = 0` che funge da flag all'interno del *for* dove il thread master invia i nomi dei file, quando viene inviato un `SIGINT` la guardia del *for* viene violata e si passa alla terminazione dei thread.
 ## Semafori
