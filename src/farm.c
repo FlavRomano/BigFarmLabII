@@ -51,7 +51,7 @@ void send_to_collector(char *mess, size_t mess_len)
         int c = htonl(package[i]);
         e = writen(fd_skt, &c, sizeof(int));
         if (e != sizeof(int))
-            termina("Errore invio carattere");
+            termina("Errore invio carattere al server");
     }
 
     if (close(fd_skt) < 0)
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        printf("Uso: %s {-n | -q | -d} file [file ...]\n", argv[0]);
+        fprintf(stderr, "Uso: %s {-n | -q | -d} file [file ...]\n", argv[0]);
         return 1;
     }
     int nthreads, qlen, delay;
