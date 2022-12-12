@@ -19,6 +19,8 @@ Utilizzo 3 semafori:
 1. `sem_data_items` il cui valore viene inizializzato a 0, conterà il numero di elementi inseriti nel buffer.
 2. `sem_free_slots` il cui valore viene inizializzato a `q_len`, conterrà il numero di slot liberi all'interno del buffer.
 3. `mutex` semaforo mutex (è un semaforo normale inizializzato a 0) viene utilizzato per serializzare l'accesso all'interno della sezione critica della funzione invocata dai thread worker.
+### Perché `volatile`?
+Viene utilizzato per assicurarsi che il contenuto della variabile venga letto dalla sua posizione effettiva in memoria piuttosto che da un registro della CPU. In modo tale da evitare che il compilatore applichi ottimizzazioni su variabili che possono cambiare in modi non determinabili dal compilatore e.g un segnale lanciato dall'utente.
 ## Struct
 Ovviamente devo passare una struct (`t_args`) al thread worker che contenga tutto ciò che gli serve per operare, in particolare:
 - `int *cindex` puntatore all'indice del buffer che consumerà il generico worker. Condiviso fra tutti i worker.
