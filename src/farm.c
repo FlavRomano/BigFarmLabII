@@ -110,7 +110,7 @@ void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
             *nthread = atoi(optarg);
             if (*nthread <= 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -n deve essere > 0.\n", *nthread);
+                fprintf(stderr, "Valore non valido '%d', -n deve essere un numero > 0.\n", *nthread);
                 exit(1);
             }
             break;
@@ -118,15 +118,15 @@ void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
             *qlen = atoi(optarg);
             if (*qlen < 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -q deve essere > 0.\n", *qlen);
+                fprintf(stderr, "Valore non valido '%d', -q deve essere un numero > 0.\n", *qlen);
                 exit(1);
             }
             break;
         case 't':
             *delay = atoi(optarg);
-            if (*delay <= 0)
+            if (*delay < 1)
             {
-                fprintf(stderr, "Valore non valido '%d', -t deve essere > 0.\n", *delay);
+                fprintf(stderr, "Valore non valido '%d', -t deve essere un numero > 0.\n", *delay);
                 exit(1);
             }
             break;
@@ -138,7 +138,8 @@ void gen_params(int argc, char *argv[], int *nthread, int *qlen, int *delay)
             }
             break;
         default:
-            abort();
+            fprintf(stderr, "Non hai inserito nessun valore dopo '-%c'.\n", optopt);
+            exit(1);
         }
     }
 }
