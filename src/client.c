@@ -25,9 +25,8 @@ void comunicazione(long l, bool request_all_pairs)
     }
     else
     {
-        size_t client_long_len = snprintf(NULL, 0, "%ld", l);
-        char *client_long = malloc(sizeof(long) * client_long_len + 1);
-        sprintf(client_long, "%ld", l);
+        char *client_long;
+        size_t client_long_len = asprintf(&client_long, "%ld", l);
         request = htonl(client_long_len);
         e = writen(fd_skt, &request, sizeof(int));
         if (e != sizeof(int))
