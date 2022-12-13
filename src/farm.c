@@ -36,9 +36,8 @@ void send_to_collector(char *file_name, long sum)
     if (connect(fd_skt, (struct sockaddr *)&serv, sizeof(serv)) < 0)
         termina("Errore apertura connessione");
 
-    size_t mess_len = snprintf(NULL, 0, "%s:%ld", file_name, sum);
-    char *mess = malloc(mess_len + 1);
-    sprintf(mess, "%s:%ld", file_name, sum);
+    char *mess;
+    size_t mess_len = asprintf(&mess, "%s:%ld", file_name, sum);
 
     int package[mess_len];
     for (int i = 0; i < mess_len; i++)
